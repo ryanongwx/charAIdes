@@ -252,5 +252,3 @@ This project was built using **Kiro's spec-driven development** approach:
 3. **Tasks** (`.kiro/specs/ai-charades/tasks.md`) — implementation checklist used to drive development
 
 The **ElevenLabs Kiro Power** provided accurate, up-to-date API guidance (correct SDK method names, parameter shapes, streaming patterns) throughout implementation without needing to read external docs.
-#   c h a r A I d e s  
- 
