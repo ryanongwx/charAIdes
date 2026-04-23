@@ -1,8 +1,8 @@
-# 🎨 AI Charades
+# 🎨 AI Pictionary
 
 > Draw it. The AI guesses it — out loud.
 
-An interactive drawing game where you sketch a word and an AI voice guesser (powered by **ElevenLabs TTS** + **OpenAI GPT-4o Vision**) speaks its guesses aloud until it gets the right answer.
+An interactive drawing and guessing game where you sketch a word and an AI voice guesser (powered by **ElevenLabs TTS** + **OpenAI GPT-4o Vision**) speaks its guesses aloud until it gets the right answer.
 
 Built for the **Kiro × ElevenLabs Hackathon** using spec-driven development.
 
@@ -110,7 +110,7 @@ This uses `concurrently` to start both processes at once:
 You should see output like:
 
 ```
-[server] 🎨 AI Charades server running on http://localhost:3001
+[server] 🎨 AI Pictionary server running on http://localhost:3001
 [client] VITE v5.x.x  ready in Xms
 [client] ➜  Local:   http://localhost:5173/
 ```
@@ -209,7 +209,7 @@ npx tsc --noEmit     # check for type errors in server
 ## Project Structure
 
 ```
-ai-charades/
+ai-pictionary/
 ├── client/                   # Vite + React + TypeScript frontend
 │   ├── src/
 │   │   ├── components/
@@ -255,7 +255,7 @@ ai-charades/
 ├── .env.example              # Environment variable template
 ├── .env                      # Your local keys (gitignored)
 ├── package.json              # Root workspace config
-└── .kiro/specs/ai-charades/  # Spec-driven development artifacts
+└── .kiro/specs/ai-pictionary/  # Spec-driven development artifacts
     ├── requirements.md
     ├── design.md
     └── tasks.md
@@ -306,8 +306,8 @@ ai-charades/
 
 This project was built using **Kiro's spec-driven development** approach:
 
-1. **Requirements** (`.kiro/specs/ai-charades/requirements.md`) — user stories and functional requirements
-2. **Design** (`.kiro/specs/ai-charades/design.md`) — architecture, data flow, component tree, API contracts
-3. **Tasks** (`.kiro/specs/ai-charades/tasks.md`) — implementation checklist used to drive development
+1. **Requirements** (`.kiro/specs/ai-pictionary/requirements.md`) — user stories and functional requirements
+2. **Design** (`.kiro/specs/ai-pictionary/design.md`) — architecture, data flow, component tree, API contracts
+3. **Tasks** (`.kiro/specs/ai-pictionary/tasks.md`) — implementation checklist used to drive development
 
 The **ElevenLabs Kiro Power** provided accurate, up-to-date API guidance (correct SDK method names, parameter shapes, streaming patterns) throughout implementation without needing to read external docs.
