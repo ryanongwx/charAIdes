@@ -440,70 +440,87 @@ export default function App() {
       <main style={styles.main} className="game-main">
         <div style={styles.leftCol} className="game-left-col">
           {isIdle ? (
-            <div style={styles.heroCard} className="hero-card">
-              <div style={styles.heroEmoji} aria-hidden="true">🎨</div>
-              <h1 style={styles.heroTitle} className="hero-title">
-                Ready to draw?
-              </h1>
-              <p style={styles.heroDesc} className="hero-desc">
-                You'll get a secret word. Sketch it, and the AI will guess out loud as you go.
-                Can you make it click before the timer runs out?
-              </p>
-
-              <div style={styles.heroMeta}>
-                <span style={styles.heroMetaLabel}>Difficulty</span>
-                <span style={styles.heroDiffPill}>
-                  {difficulty === "easy" ? "🟢" : difficulty === "medium" ? "🟡" : "🔴"}{" "}
-                  {difficulty[0].toUpperCase() + difficulty.slice(1)}
-                </span>
-              </div>
-
-              <button
-                onClick={handleStartGame}
-                disabled={isLoading}
-                style={{
-                  ...styles.btn,
-                  ...styles.btnPrimary,
-                  ...styles.heroStartBtn,
-                  ...(isLoading ? styles.btnDisabled : {}),
-                }}
-                className="hero-start-btn"
-                title="Start game (S)"
-              >
-                {isLoading ? "⏳ Loading..." : "🎮 Start Game"}
-              </button>
-
-              <p style={styles.heroHint}>
-                Tip: press <kbd style={styles.kbd}>S</kbd> to start,{" "}
-                <kbd style={styles.kbd}>?</kbd> for shortcuts
-              </p>
-            </div>
-          ) : (
-            <>
-              {wordEntry && (
-                <div style={styles.wordCard}>
-                  <div style={styles.wordMeta}>
-                    <span style={styles.categoryBadge}>{wordEntry.category}</span>
-                    <span style={styles.diffBadge}>{wordEntry.difficulty}</span>
-                  </div>
-                  <div style={styles.secretWord}>
-                    <span style={styles.wordLabel}>Your word:</span>
-                    <span style={styles.wordValue}>{wordEntry.word}</span>
+            <div style={styles.startStrip} className="start-strip">
+              <div style={styles.startStripGlow} aria-hidden="true" />
+              <div style={styles.startStripInner} className="start-strip-inner">
+                <div style={styles.startStripLeft}>
+                  <div style={styles.startStripEmoji} aria-hidden="true">🎨</div>
+                  <div>
+                    <div style={styles.startStripEyebrow}>Ready when you are</div>
+                    <div style={styles.startStripTitle} className="start-strip-title">
+                      Let's draw something!
+                    </div>
                   </div>
                 </div>
-              )}
+                <div style={styles.startStripRight} className="start-strip-right">
+                  <button
+                    onClick={handleStartGame}
+                    disabled={isLoading}
+                    style={{
+                      ...styles.btn,
+                      ...styles.btnPrimary,
+                      ...styles.startBtn,
+                      ...(isLoading ? styles.btnDisabled : {}),
+                    }}
+                    className="start-btn"
+                    title="Start game (S)"
+                  >
+                    {isLoading ? "⏳ Loading…" : "▶  Start Game"}
+                  </button>
+                  <div style={styles.wordSourceRow} className="word-source-row">
+                    <span style={styles.wordSourceLabel}>or get your word from:</span>
+                    <button
+                      onClick={handleWordOfTheDay}
+                      disabled={isLoading}
+                      style={{
+                        ...styles.wordSourceBtn,
+                        ...(isLoading ? styles.btnDisabled : {}),
+                      }}
+                      title="Word of the Day"
+                    >
+                      📅 Daily
+                    </button>
+                    <button
+                      onClick={handleGenerateWord}
+                      disabled={isLoading}
+                      style={{
+                        ...styles.wordSourceBtn,
+                        ...(isLoading ? styles.btnDisabled : {}),
+                      }}
+                      title="Generate a brand-new word with AI"
+                    >
+                      ✨ AI Word
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : wordEntry ? (
+            <div style={styles.wordCard}>
+              <div style={styles.wordMeta}>
+                <span style={styles.categoryBadge}>{wordEntry.category}</span>
+                <span style={styles.diffBadge}>{wordEntry.difficulty}</span>
+              </div>
+              <div style={styles.secretWord}>
+                <span style={styles.wordLabel}>Your word:</span>
+                <span style={styles.wordValue}>{wordEntry.word}</span>
+              </div>
+            </div>
+          ) : null}
 
-              {canDraw && <TimerBar timeLeft={timeLeft} />}
+          {canDraw && <TimerBar timeLeft={timeLeft} />}
 
-              <DrawingCanvas
-                ref={canvasRef}
-                disabled={!canDraw}
-                thinking={isGuessing}
-                onStrokeStart={playDraw}
-                onHistoryChange={handleCanvasHistory}
-              />
+          <DrawingCanvas
+            ref={canvasRef}
+            disabled={!canDraw}
+            thinking={isGuessing}
+            idleHint={isIdle}
+            onStrokeStart={playDraw}
+            onHistoryChange={handleCanvasHistory}
+          />
 
-              <div style={styles.controls} className="game-controls">
+          {!isIdle && (
+            <div style={styles.controls} className="game-controls">
                 <button
                   onClick={handleGuessNow}
                   disabled={isGuessing || isOver || canvasEmpty}
@@ -545,8 +562,7 @@ export default function App() {
                 >
                   🗑️ Clear
                 </button>
-              </div>
-            </>
+            </div>
           )}
         </div>
 
@@ -610,89 +626,103 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: "260px",
     overflowY: "auto",
   },
-  heroCard: {
-    background:
-      "linear-gradient(180deg, rgba(30,30,60,0.6) 0%, rgba(23,23,48,0.8) 100%)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius-lg)",
-    padding: "56px 40px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "16px",
-    textAlign: "center",
-    flex: 1,
-    minHeight: "360px",
-    boxShadow: "var(--shadow)",
-    animation: "fadeIn 0.35s ease",
+  startStrip: {
     position: "relative",
+    borderRadius: "var(--radius-lg)",
+    padding: "2px",
+    background:
+      "conic-gradient(from 90deg at 50% 50%, #ff4d6d, #ffb648, #4ecdc4, #9a6dff, #ff4d6d)",
+    boxShadow: "0 12px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.03)",
     overflow: "hidden",
+    animation: "fadeIn 0.3s ease",
   },
-  heroEmoji: {
-    fontSize: "64px",
+  startStripGlow: {
+    position: "absolute",
+    inset: "-40%",
+    background:
+      "conic-gradient(from 0deg at 50% 50%, rgba(255,77,109,0.5), rgba(255,182,72,0.5), rgba(78,205,196,0.5), rgba(154,109,255,0.5), rgba(255,77,109,0.5))",
+    filter: "blur(30px)",
+    opacity: 0.35,
+    animation: "spin 18s linear infinite",
+    pointerEvents: "none",
+    zIndex: 0,
+  },
+  startStripInner: {
+    position: "relative",
+    zIndex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "20px",
+    padding: "20px 24px",
+    borderRadius: "calc(var(--radius-lg) - 2px)",
+    background:
+      "linear-gradient(180deg, rgba(22,22,44,0.92) 0%, rgba(16,16,32,0.95) 100%)",
+    flexWrap: "wrap",
+  },
+  startStripLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    minWidth: 0,
+  },
+  startStripEmoji: {
+    fontSize: "44px",
     lineHeight: 1,
     animation: "floatY 3s ease-in-out infinite",
-    filter: "drop-shadow(0 8px 20px rgba(255, 77, 109, 0.35))",
+    filter: "drop-shadow(0 6px 16px rgba(255, 77, 109, 0.45))",
+    flexShrink: 0,
   },
-  heroTitle: {
+  startStripEyebrow: {
+    fontSize: "11px",
+    textTransform: "uppercase",
+    letterSpacing: "2px",
+    color: "var(--text-dim)",
+    fontWeight: 600,
+    marginBottom: "2px",
+  },
+  startStripTitle: {
     fontFamily: "'Fredoka One', cursive",
-    fontSize: "36px",
-    margin: 0,
-    background: "linear-gradient(135deg, #ff4d6d 0%, #ffb648 50%, #4ecdc4 100%)",
+    fontSize: "26px",
+    background: "linear-gradient(135deg, #ff4d6d 0%, #ffb648 45%, #4ecdc4 100%)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
-    letterSpacing: "0.5px",
+    letterSpacing: "0.3px",
+    lineHeight: 1.1,
   },
-  heroDesc: {
-    maxWidth: "460px",
-    color: "var(--text-muted)",
-    fontSize: "15px",
-    lineHeight: 1.6,
-  },
-  heroMeta: {
+  startStripRight: {
     display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginTop: "4px",
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: "8px",
   },
-  heroMetaLabel: {
-    fontSize: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "1.5px",
-    color: "var(--text-dim)",
-  },
-  heroDiffPill: {
-    padding: "6px 14px",
-    borderRadius: "999px",
-    background: "var(--surface2)",
-    border: "1px solid var(--border-strong)",
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "var(--text)",
-  },
-  heroStartBtn: {
-    marginTop: "12px",
-    fontSize: "18px",
-    padding: "16px 44px",
+  startBtn: {
+    fontSize: "17px",
+    padding: "14px 32px",
     animation: "pulseGlow 2.4s ease-in-out infinite",
   },
-  heroHint: {
-    marginTop: "4px",
-    fontSize: "13px",
+  wordSourceRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
+  wordSourceLabel: {
+    fontSize: "12px",
     color: "var(--text-dim)",
   },
-  kbd: {
-    display: "inline-block",
-    padding: "2px 7px",
-    background: "var(--surface2)",
-    border: "1px solid var(--border-strong)",
-    borderRadius: "6px",
-    fontFamily: "ui-monospace, 'SF Mono', monospace",
-    fontSize: "11px",
+  wordSourceBtn: {
+    padding: "6px 12px",
+    borderRadius: "999px",
+    background: "rgba(255,255,255,0.04)",
     color: "var(--text)",
-    boxShadow: "inset 0 -1px 0 var(--border)",
+    fontSize: "12px",
+    fontWeight: 600,
+    border: "1px solid var(--border-strong)",
+    cursor: "pointer",
+    fontFamily: "inherit",
   },
   wordCard: {
     background: "var(--surface)",

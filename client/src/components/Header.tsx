@@ -7,6 +7,7 @@ interface HeaderProps {
   disabled: boolean;
   onShowStats: () => void;
   onShowShortcuts: () => void;
+  // Kept on the props for API stability; surfaced in the StartStrip instead.
   onGenerateWord: () => void;
   onWordOfTheDay: () => void;
 }
@@ -23,17 +24,19 @@ export default function Header({
   disabled,
   onShowStats,
   onShowShortcuts,
-  onGenerateWord,
-  onWordOfTheDay,
 }: HeaderProps) {
   return (
     <header style={styles.header} className="app-header">
       <div style={styles.title}>
         <span style={styles.emoji} className="header-emoji" aria-hidden="true">🎨</span>
-        <span style={styles.titleText} className="header-title-text">AI Charades</span>
-        <span style={styles.subtitle} className="header-subtitle">
-          Draw it. The AI guesses it.
-        </span>
+        <div style={styles.titleBlock}>
+          <span style={styles.titleText} className="header-title-text">
+            AI Charades
+          </span>
+          <span style={styles.subtitle} className="header-subtitle">
+            Draw it. The AI guesses it.
+          </span>
+        </div>
       </div>
 
       <div style={styles.controls}>
@@ -58,40 +61,26 @@ export default function Header({
           ))}
         </div>
 
-        <div style={styles.iconButtons}>
-          <button
-            onClick={onWordOfTheDay}
-            style={styles.iconBtn}
-            aria-label="Word of the day"
-            title="Word of the Day"
-            disabled={disabled}
-          >
-            📅
-          </button>
-          <button
-            onClick={onGenerateWord}
-            style={styles.iconBtn}
-            aria-label="Generate AI word"
-            title="Generate AI Word"
-            disabled={disabled}
-          >
-            ✨
-          </button>
+        <div style={styles.actionGroup}>
           <button
             onClick={onShowStats}
-            style={styles.iconBtn}
+            style={styles.actionBtn}
+            className="header-action-btn"
             aria-label="View stats"
-            title="View stats"
+            title="View your stats"
           >
-            📊
+            <span aria-hidden="true">📊</span>
+            <span className="header-action-label">Stats</span>
           </button>
           <button
             onClick={onShowShortcuts}
-            style={styles.iconBtn}
+            style={styles.actionBtn}
+            className="header-action-btn"
             aria-label="Keyboard shortcuts"
             title="Keyboard shortcuts (?)"
           >
-            ⌨️
+            <span aria-hidden="true">⌨️</span>
+            <span className="header-action-label">Shortcuts</span>
           </button>
         </div>
       </div>
@@ -107,38 +96,48 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "14px 24px",
     borderBottom: "1px solid var(--border)",
     background:
-      "linear-gradient(180deg, rgba(23,23,48,0.9) 0%, rgba(18,18,37,0.75) 100%)",
+      "linear-gradient(180deg, rgba(23,23,48,0.92) 0%, rgba(18,18,37,0.72) 100%)",
     backdropFilter: "blur(10px)",
     WebkitBackdropFilter: "blur(10px)",
     flexWrap: "wrap",
-    gap: "12px",
+    gap: "14px",
     position: "relative",
     zIndex: 10,
-    boxShadow: "0 1px 0 rgba(255,255,255,0.02), 0 8px 24px rgba(0,0,0,0.2)",
+    boxShadow:
+      "inset 0 -1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.25)",
   },
   title: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "12px",
   },
   emoji: {
-    fontSize: "28px",
+    fontSize: "30px",
     lineHeight: 1,
-    filter: "drop-shadow(0 2px 8px rgba(255, 77, 109, 0.4))",
+    filter: "drop-shadow(0 2px 10px rgba(255, 77, 109, 0.5))",
+    animation: "floatY 4s ease-in-out infinite",
+  },
+  titleBlock: {
+    display: "flex",
+    flexDirection: "column",
+    lineHeight: 1,
   },
   titleText: {
     fontFamily: "'Fredoka One', cursive",
-    fontSize: "26px",
+    fontSize: "28px",
     letterSpacing: "0.5px",
-    background: "linear-gradient(135deg, #ff4d6d 0%, #ffb648 100%)",
+    background:
+      "linear-gradient(90deg, #ff4d6d 0%, #ffb648 33%, #4ecdc4 66%, #9a6dff 100%)",
+    backgroundSize: "200% 100%",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
+    animation: "hueShift 6s ease-in-out infinite",
   },
   subtitle: {
-    fontSize: "13px",
+    fontSize: "12px",
     color: "var(--text-muted)",
-    marginLeft: "4px",
+    marginTop: "2px",
   },
   controls: {
     display: "flex",
@@ -148,14 +147,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   difficultyGroup: {
     display: "flex",
-    gap: "6px",
+    gap: "4px",
     padding: "4px",
-    background: "var(--surface2)",
+    background: "rgba(255,255,255,0.03)",
     border: "1px solid var(--border)",
     borderRadius: "999px",
   },
   diffBtn: {
-    padding: "6px 14px",
+    padding: "7px 14px",
     borderRadius: "999px",
     background: "transparent",
     color: "var(--text-muted)",
@@ -169,27 +168,28 @@ const styles: Record<string, React.CSSProperties> = {
   diffBtnActive: {
     background: "var(--accent-grad)",
     color: "#fff",
-    boxShadow: "0 2px 10px var(--accent-glow)",
+    boxShadow: "0 2px 12px var(--accent-glow)",
   },
   diffBtnDisabled: {
     opacity: 0.5,
     cursor: "not-allowed",
   },
-  iconButtons: {
+  actionGroup: {
     display: "flex",
     gap: "6px",
   },
-  iconBtn: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "50%",
-    background: "var(--surface2)",
-    border: "1px solid var(--border)",
-    fontSize: "18px",
-    display: "flex",
+  actionBtn: {
+    display: "inline-flex",
     alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
+    gap: "6px",
+    padding: "7px 12px",
+    borderRadius: "10px",
+    background: "var(--surface2)",
     color: "var(--text)",
+    border: "1px solid var(--border)",
+    fontSize: "13px",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
   },
 };

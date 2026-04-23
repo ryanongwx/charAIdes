@@ -93,11 +93,14 @@ const styles: Record<string, React.CSSProperties> = {
     gap: "10px",
     padding: "14px 18px",
     borderBottom: "1px solid var(--border)",
-    background: "rgba(30,30,60,0.55)",
+    background:
+      "linear-gradient(90deg, rgba(78,205,196,0.10) 0%, rgba(154,109,255,0.08) 100%)",
   },
   aiAvatar: {
     fontSize: "22px",
     filter: "drop-shadow(0 2px 6px rgba(78,205,196,0.4))",
+    animation: "bounceSoft 2.2s ease-in-out infinite",
+    display: "inline-block",
   },
   headerText: {
     fontWeight: 700,

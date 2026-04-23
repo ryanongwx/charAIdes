@@ -10,6 +10,7 @@ export interface DrawingCanvasHandle {
 interface DrawingCanvasProps {
   disabled?: boolean;
   thinking?: boolean;
+  idleHint?: boolean;
   onStrokeStart?: () => void;
   onStrokeEnd?: () => void;
   onHistoryChange?: (canUndo: boolean, isEmpty: boolean) => void;
@@ -30,7 +31,7 @@ const BRUSH_SIZES = [
 const HISTORY_CAP = 10;
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
-  ({ disabled = false, thinking = false, onStrokeStart, onStrokeEnd, onHistoryChange }, ref) => {
+  ({ disabled = false, thinking = false, idleHint = false, onStrokeStart, onStrokeEnd, onHistoryChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [color, setColor] = useState("#000000");
@@ -186,9 +187,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
                   ...styles.colorSwatch,
                   background: c,
                   border: !isErasing && color === c
-                    ? "3px solid var(--accent3)"
-                    : "2px solid var(--border)",
-                  transform: !isErasing && color === c ? "scale(1.2)" : "scale(1)",
+                    ? "3px solid #fff"
+                    : "2px solid rgba(255,255,255,0.15)",
+                  transform: !isErasing && color === c ? "scale(1.22)" : "scale(1)",
+                  boxShadow:
+                    !isErasing && color === c
+                      ? `0 0 0 3px ${c}66, 0 2px 10px rgba(0,0,0,0.35)`
+                      : "0 1px 3px rgba(0,0,0,0.35)",
                 }}
               />
             ))}
@@ -205,8 +210,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
                 aria-label={`Brush size ${b.label}`}
                 style={{
                   ...styles.brushBtn,
-                  background: brushSize === b.size ? "var(--accent)" : "var(--surface2)",
+                  background:
+                    brushSize === b.size ? "var(--accent-grad)" : "var(--surface2)",
                   color: brushSize === b.size ? "#fff" : "var(--text-muted)",
+                  border:
+                    brushSize === b.size
+                      ? "1px solid transparent"
+                      : "1px solid var(--border)",
+                  boxShadow:
+                    brushSize === b.size ? "0 2px 8px var(--accent-glow)" : "none",
                 }}
               >
                 {b.label}
@@ -279,6 +291,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             <div style={styles.thinkingBadge} aria-live="polite">
               <span style={styles.thinkingDot} />
               <span>AI is guessing…</span>
+            </div>
+          )}
+          {idleHint && !thinking && (
+            <div style={styles.idleHint} aria-hidden="true">
+              <div style={styles.idleHintEmoji}>🖍️</div>
+              <div style={styles.idleHintText}>
+                Your canvas is ready.<br />
+                <span style={styles.idleHintSub}>Press <strong style={{ color: "var(--accent)" }}>Start Game</strong> to get your word.</span>
+              </div>
             </div>
           )}
         </div>
@@ -385,5 +406,37 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "50%",
     background: "var(--accent3)",
     animation: "pulse 1s ease-in-out infinite",
+  },
+  idleHint: {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    pointerEvents: "none",
+    textAlign: "center",
+    padding: "16px",
+  },
+  idleHintEmoji: {
+    fontSize: "48px",
+    lineHeight: 1,
+    animation: "floatY 3.5s ease-in-out infinite",
+    filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.15))",
+  },
+  idleHintText: {
+    fontSize: "17px",
+    color: "#2a2a50",
+    fontFamily: "'Fredoka One', cursive",
+    letterSpacing: "0.3px",
+    lineHeight: 1.35,
+  },
+  idleHintSub: {
+    fontSize: "13px",
+    fontFamily: "'Inter', sans-serif",
+    color: "#5e5e80",
+    fontWeight: 500,
+    letterSpacing: 0,
   },
 };
