@@ -10,7 +10,7 @@ export interface GameStats {
   averageGuesses: number;
 }
 
-const STORAGE_KEY = "ai-charades-stats";
+const STORAGE_KEY = "ai-pictionary-stats";
 
 const defaultStats: GameStats = {
   gamesPlayed: 0,

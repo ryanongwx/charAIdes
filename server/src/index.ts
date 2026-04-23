@@ -66,5 +66,5 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 });
 
 app.listen(PORT, () => {
-  console.log(`🎨 AI Charades server running on http://localhost:${PORT}`);
+  console.log(`🎨 AI Pictionary server running on http://localhost:${PORT}`);
 });

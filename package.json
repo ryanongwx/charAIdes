@@ -1,5 +1,5 @@
 {
-  "name": "ai-charades",
+  "name": "ai-pictionary",
   "version": "1.0.0",
   "private": true,
   "workspaces": ["client", "server"],

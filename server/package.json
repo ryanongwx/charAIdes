@@ -1,5 +1,5 @@
 {
-  "name": "ai-charades-server",
+  "name": "ai-pictionary-server",
   "version": "1.0.0",
   "private": true,
   "scripts": {
