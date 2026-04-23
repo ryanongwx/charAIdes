@@ -450,49 +450,27 @@ export default function App() {
                     <div style={styles.startStripTitle} className="start-strip-title">
                       Let's draw something!
                     </div>
+                    <div style={styles.startStripHint} className="start-strip-hint">
+                      Word source: <strong>Word Bank</strong> · Use{" "}
+                      <strong>📅 Daily</strong> or <strong>✨ AI Word</strong> in the top bar
+                      to switch.
+                    </div>
                   </div>
                 </div>
-                <div style={styles.startStripRight} className="start-strip-right">
-                  <button
-                    onClick={handleStartGame}
-                    disabled={isLoading}
-                    style={{
-                      ...styles.btn,
-                      ...styles.btnPrimary,
-                      ...styles.startBtn,
-                      ...(isLoading ? styles.btnDisabled : {}),
-                    }}
-                    className="start-btn"
-                    title="Start game (S)"
-                  >
-                    {isLoading ? "⏳ Loading…" : "▶  Start Game"}
-                  </button>
-                  <div style={styles.wordSourceRow} className="word-source-row">
-                    <span style={styles.wordSourceLabel}>or get your word from:</span>
-                    <button
-                      onClick={handleWordOfTheDay}
-                      disabled={isLoading}
-                      style={{
-                        ...styles.wordSourceBtn,
-                        ...(isLoading ? styles.btnDisabled : {}),
-                      }}
-                      title="Word of the Day"
-                    >
-                      📅 Daily
-                    </button>
-                    <button
-                      onClick={handleGenerateWord}
-                      disabled={isLoading}
-                      style={{
-                        ...styles.wordSourceBtn,
-                        ...(isLoading ? styles.btnDisabled : {}),
-                      }}
-                      title="Generate a brand-new word with AI"
-                    >
-                      ✨ AI Word
-                    </button>
-                  </div>
-                </div>
+                <button
+                  onClick={handleStartGame}
+                  disabled={isLoading}
+                  style={{
+                    ...styles.btn,
+                    ...styles.btnPrimary,
+                    ...styles.startBtn,
+                    ...(isLoading ? styles.btnDisabled : {}),
+                  }}
+                  className="start-btn"
+                  title="Start game (S)"
+                >
+                  {isLoading ? "⏳ Loading…" : "▶  Start Game"}
+                </button>
               </div>
             </div>
           ) : wordEntry ? (
@@ -635,6 +613,7 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "0 12px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.03)",
     overflow: "hidden",
     animation: "fadeIn 0.3s ease",
+    flexShrink: 0,
   },
   startStripGlow: {
     position: "absolute",
@@ -654,7 +633,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: "20px",
-    padding: "20px 24px",
+    padding: "22px 26px",
     borderRadius: "calc(var(--radius-lg) - 2px)",
     background:
       "linear-gradient(180deg, rgba(22,22,44,0.92) 0%, rgba(16,16,32,0.95) 100%)",
@@ -663,11 +642,12 @@ const styles: Record<string, React.CSSProperties> = {
   startStripLeft: {
     display: "flex",
     alignItems: "center",
-    gap: "16px",
+    gap: "18px",
     minWidth: 0,
+    flex: "1 1 300px",
   },
   startStripEmoji: {
-    fontSize: "44px",
+    fontSize: "48px",
     lineHeight: 1,
     animation: "floatY 3s ease-in-out infinite",
     filter: "drop-shadow(0 6px 16px rgba(255, 77, 109, 0.45))",
@@ -679,11 +659,11 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "2px",
     color: "var(--text-dim)",
     fontWeight: 600,
-    marginBottom: "2px",
+    marginBottom: "4px",
   },
   startStripTitle: {
     fontFamily: "'Fredoka One', cursive",
-    fontSize: "26px",
+    fontSize: "28px",
     background: "linear-gradient(135deg, #ff4d6d 0%, #ffb648 45%, #4ecdc4 100%)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
@@ -691,38 +671,17 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.3px",
     lineHeight: 1.1,
   },
-  startStripRight: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: "8px",
+  startStripHint: {
+    marginTop: "6px",
+    fontSize: "12px",
+    color: "var(--text-muted)",
+    lineHeight: 1.4,
   },
   startBtn: {
-    fontSize: "17px",
-    padding: "14px 32px",
+    fontSize: "18px",
+    padding: "16px 36px",
     animation: "pulseGlow 2.4s ease-in-out infinite",
-  },
-  wordSourceRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-  },
-  wordSourceLabel: {
-    fontSize: "12px",
-    color: "var(--text-dim)",
-  },
-  wordSourceBtn: {
-    padding: "6px 12px",
-    borderRadius: "999px",
-    background: "rgba(255,255,255,0.04)",
-    color: "var(--text)",
-    fontSize: "12px",
-    fontWeight: 600,
-    border: "1px solid var(--border-strong)",
-    cursor: "pointer",
-    fontFamily: "inherit",
+    flexShrink: 0,
   },
   wordCard: {
     background: "var(--surface)",
@@ -736,6 +695,7 @@ const styles: Record<string, React.CSSProperties> = {
     animation: "slideUp 0.3s ease",
     boxShadow: "var(--shadow-sm)",
     flexWrap: "wrap",
+    flexShrink: 0,
   },
   wordMeta: {
     display: "flex",
@@ -783,6 +743,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: "10px",
     flexWrap: "wrap",
     alignItems: "center",
+    flexShrink: 0,
   },
   btn: {
     padding: "11px 22px",

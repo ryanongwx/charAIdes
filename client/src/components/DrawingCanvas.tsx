@@ -316,6 +316,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     gap: "10px",
     width: "100%",
+    minHeight: 0,
+    flex: "1 1 auto",
   },
   toolbar: {
     display: "flex",

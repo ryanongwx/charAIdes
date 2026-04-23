@@ -269,20 +269,15 @@ button:disabled {
   .start-strip-inner {
     flex-direction: column;
     align-items: stretch !important;
-    gap: 16px !important;
+    gap: 14px !important;
     padding: 18px !important;
   }
-  .start-strip-title { font-size: 22px !important; }
-  .start-strip-right {
-    align-items: stretch !important;
-    gap: 10px !important;
-  }
-  .start-strip-right .start-btn {
+  .start-strip-inner .start-btn {
     width: 100%;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
   }
-  .word-source-row {
-    justify-content: center !important;
-  }
+  .start-strip-title { font-size: 22px !important; }
 
   /* Canvas toolbar wraps tighter */
   .canvas-toolbar {

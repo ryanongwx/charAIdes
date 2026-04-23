@@ -7,7 +7,6 @@ interface HeaderProps {
   disabled: boolean;
   onShowStats: () => void;
   onShowShortcuts: () => void;
-  // Kept on the props for API stability; surfaced in the StartStrip instead.
   onGenerateWord: () => void;
   onWordOfTheDay: () => void;
 }
@@ -24,6 +23,8 @@ export default function Header({
   disabled,
   onShowStats,
   onShowShortcuts,
+  onGenerateWord,
+  onWordOfTheDay,
 }: HeaderProps) {
   return (
     <header style={styles.header} className="app-header">
@@ -62,6 +63,37 @@ export default function Header({
         </div>
 
         <div style={styles.actionGroup}>
+          <button
+            onClick={onWordOfTheDay}
+            disabled={disabled}
+            style={{
+              ...styles.actionBtn,
+              ...(disabled ? styles.actionBtnDisabled : {}),
+            }}
+            className="header-action-btn"
+            aria-label="Use word of the day"
+            title="Start with today's Word of the Day"
+          >
+            <span aria-hidden="true">📅</span>
+            <span className="header-action-label">Daily</span>
+          </button>
+          <button
+            onClick={onGenerateWord}
+            disabled={disabled}
+            style={{
+              ...styles.actionBtn,
+              ...(disabled ? styles.actionBtnDisabled : {}),
+            }}
+            className="header-action-btn"
+            aria-label="Generate an AI word"
+            title="Generate a fresh word with AI"
+          >
+            <span aria-hidden="true">✨</span>
+            <span className="header-action-label">AI Word</span>
+          </button>
+
+          <div style={styles.actionDivider} aria-hidden="true" />
+
           <button
             onClick={onShowStats}
             style={styles.actionBtn}
@@ -176,6 +208,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   actionGroup: {
     display: "flex",
+    alignItems: "center",
     gap: "6px",
   },
   actionBtn: {
@@ -191,5 +224,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     cursor: "pointer",
     fontFamily: "inherit",
+  },
+  actionBtnDisabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+  actionDivider: {
+    width: "1px",
+    height: "22px",
+    background: "var(--border)",
+    margin: "0 2px",
   },
 };
