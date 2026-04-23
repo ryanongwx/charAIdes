@@ -60,6 +60,13 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// Serve built client files
+const clientDist = path.resolve(__dirname, "../../client/dist");
+app.use(express.static(clientDist));
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(clientDist, "index.html"));
+});
+
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("Unhandled error:", err);
   if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
