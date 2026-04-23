@@ -200,12 +200,12 @@ button:disabled {
 /* Tablet: <= 1024px */
 @media (max-width: 1024px) {
   .game-main {
-    gap: 16px !important;
-    padding: 16px !important;
+    gap: 14px !important;
+    padding: 14px 16px !important;
   }
   .game-right-col {
-    flex: 0 0 260px !important;
-    min-width: 220px !important;
+    flex: 0 0 240px !important;
+    min-width: 200px !important;
   }
 }
 

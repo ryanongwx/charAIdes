@@ -265,7 +265,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           </button>
         </div>
 
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", width: "100%" }}>
           <canvas
             ref={canvasRef}
             width={600}
@@ -274,7 +274,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               ...styles.canvas,
               cursor: disabled ? "not-allowed" : isErasing ? "cell" : "crosshair",
               opacity: disabled ? 0.7 : 1,
-              maxHeight: "420px",
             }}
             onMouseDown={startDraw}
             onMouseMove={draw}
@@ -316,6 +315,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "10px",
+    width: "100%",
   },
   toolbar: {
     display: "flex",
@@ -377,7 +377,6 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid var(--border)",
     background: "#ffffff",
     width: "100%",
-    maxWidth: "600px",
     height: "auto",
     touchAction: "none",
     boxShadow:
