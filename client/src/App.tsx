@@ -7,11 +7,14 @@ import ResultOverlay from "./components/ResultOverlay";
 import StatsPanel from "./components/StatsPanel";
 import ShortcutsPanel from "./components/ShortcutsPanel";
 import LoadingIndicator from "./components/LoadingIndicator";
+import RateLimitModal from "./components/RateLimitModal";
 import { useGameState } from "./hooks/useGameState";
 import { useAudio } from "./hooks/useAudio";
 import { useGameStats } from "./hooks/useGameStats";
 import { useSoundEffects } from "./hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useRateLimit, RateLimitExceededError } from "./hooks/useRateLimit";
+import type { RateLimitState } from "./hooks/useRateLimit";
 import { useToast } from "./contexts/ToastContext";
 import type { Difficulty } from "./hooks/useGameState";
 import { apiUrl } from "./lib/api";
@@ -38,11 +41,13 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canvasEmpty, setCanvasEmpty] = useState(true);
+  const [rateLimitHit, setRateLimitHit] = useState<RateLimitState | null>(null);
+  const { state: rateLimitState, refresh: refreshRateLimit, consume: consumeGameQuota } = useRateLimit();
   const gameRecordedRef = useRef(false);
   const lastGuessedSigRef = useRef<string | null>(null);
   const unchangedTicksRef = useRef(0);
   const loadingAbortRef = useRef<AbortController | null>(null);
-  const beginRoundRef = useRef<(d?: Difficulty) => void>(() => {});
+  const beginRoundRef = useRef<(d?: Difficulty) => void | Promise<void>>(() => {});
 
   const {
     phase,
@@ -209,7 +214,26 @@ export default function App() {
   }, [phase, guessCount, showToast]);
 
   const beginRound = useCallback(
-    (d?: Difficulty, customWord?: { word: string; category: string; difficulty: Difficulty }) => {
+    async (
+      d?: Difficulty,
+      customWord?: { word: string; category: string; difficulty: Difficulty }
+    ) => {
+      // Enforce the per-day quota BEFORE kicking off the round (and before
+      // any further API calls the round triggers — e.g. guess vision calls).
+      try {
+        await consumeGameQuota();
+      } catch (err) {
+        if (err instanceof RateLimitExceededError) {
+          setRateLimitHit(err.state);
+          playError();
+          return;
+        }
+        // Network failure hitting the quota endpoint — don't hard-block the
+        // user; surface a gentle warning and continue so the game is still
+        // playable when the rate-limit endpoint is briefly unreachable.
+        console.warn("Rate-limit consume failed; allowing game to proceed:", err);
+      }
+
       stopAudio();
       canvasRef.current?.clear();
       gameRecordedRef.current = false;
@@ -255,7 +279,16 @@ export default function App() {
           });
       }
     },
-    [startRound, startCustomRound, playClick, playError, stopAudio, difficulty, showToast]
+    [
+      consumeGameQuota,
+      startRound,
+      startCustomRound,
+      playClick,
+      playError,
+      stopAudio,
+      difficulty,
+      showToast,
+    ]
   );
 
   // Keep ref current so retry closures always call the latest version
@@ -263,6 +296,15 @@ export default function App() {
 
   const handleGenerateWord = useCallback(async () => {
     if (!isIdle && !isOver) return;
+
+    // Optimistic peek: if we already know we're at cap, avoid the OpenAI
+    // call entirely. The authoritative check still happens in beginRound.
+    const snapshot = await refreshRateLimit();
+    if (snapshot && snapshot.remaining <= 0) {
+      setRateLimitHit(snapshot);
+      playError();
+      return;
+    }
 
     loadingAbortRef.current?.abort();
     const controller = new AbortController();
@@ -303,10 +345,17 @@ export default function App() {
       setLoadingState({ type: "none" });
       loadingAbortRef.current = null;
     }
-  }, [isIdle, isOver, difficulty, playClick, playError, beginRound, showToast]);
+  }, [isIdle, isOver, difficulty, playClick, playError, beginRound, showToast, refreshRateLimit]);
 
   const handleWordOfTheDay = useCallback(async () => {
     if (!isIdle && !isOver) return;
+
+    const snapshot = await refreshRateLimit();
+    if (snapshot && snapshot.remaining <= 0) {
+      setRateLimitHit(snapshot);
+      playError();
+      return;
+    }
 
     loadingAbortRef.current?.abort();
     const controller = new AbortController();
@@ -342,7 +391,7 @@ export default function App() {
       setLoadingState({ type: "none" });
       loadingAbortRef.current = null;
     }
-  }, [isIdle, isOver, difficulty, playClick, playError, beginRound, showToast]);
+  }, [isIdle, isOver, difficulty, playClick, playError, beginRound, showToast, refreshRateLimit]);
 
   const handleCancelLoading = useCallback(() => {
     loadingAbortRef.current?.abort();
@@ -435,6 +484,8 @@ export default function App() {
         onShowShortcuts={() => setShowShortcuts(true)}
         onGenerateWord={handleGenerateWord}
         onWordOfTheDay={handleWordOfTheDay}
+        gamesRemaining={rateLimitState?.remaining}
+        gamesLimit={rateLimitState?.limit}
       />
 
       <main style={styles.main} className="game-main">
@@ -571,6 +622,18 @@ export default function App() {
       )}
 
       {showShortcuts && <ShortcutsPanel onClose={() => setShowShortcuts(false)} />}
+
+      {rateLimitHit && (
+        <RateLimitModal
+          used={rateLimitHit.used}
+          limit={rateLimitHit.limit}
+          resetAt={rateLimitHit.resetAt}
+          onClose={() => {
+            setRateLimitHit(null);
+            void refreshRateLimit();
+          }}
+        />
+      )}
     </div>
   );
 }

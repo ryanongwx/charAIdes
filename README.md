@@ -80,7 +80,14 @@ ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
 PORT=3001
 ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
+GAMES_PER_DAY=3
 ```
+
+`GAMES_PER_DAY` caps the number of games a single IP can start per rolling
+24-hour window. This protects your OpenAI / ElevenLabs credits from being
+burned by a single user or a tab left open. Defaults to `3` if unset. The
+counter is in-memory and resets when the server restarts — swap in a Redis
+store (e.g. `rate-limit-redis`) if you run multiple instances.
 
 **Where to get your keys:**
 

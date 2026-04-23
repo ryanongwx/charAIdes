@@ -9,6 +9,8 @@ interface HeaderProps {
   onShowShortcuts: () => void;
   onGenerateWord: () => void;
   onWordOfTheDay: () => void;
+  gamesRemaining?: number;
+  gamesLimit?: number;
 }
 
 const difficulties: { value: Difficulty; label: string; emoji: string }[] = [
@@ -25,7 +27,14 @@ export default function Header({
   onShowShortcuts,
   onGenerateWord,
   onWordOfTheDay,
+  gamesRemaining,
+  gamesLimit,
 }: HeaderProps) {
+  const showQuota =
+    typeof gamesRemaining === "number" && typeof gamesLimit === "number" && gamesLimit > 0;
+  const quotaExhausted = showQuota && gamesRemaining === 0;
+  const quotaLow = showQuota && gamesRemaining === 1;
+
   return (
     <header style={styles.header} className="app-header">
       <div style={styles.title}>
@@ -63,6 +72,32 @@ export default function Header({
         </div>
 
         <div style={styles.actionGroup}>
+          {showQuota && (
+            <div
+              style={{
+                ...styles.quotaBadge,
+                ...(quotaExhausted
+                  ? styles.quotaBadgeExhausted
+                  : quotaLow
+                  ? styles.quotaBadgeLow
+                  : {}),
+              }}
+              className="header-quota-badge"
+              role="status"
+              aria-live="polite"
+              title={
+                quotaExhausted
+                  ? "Daily game limit reached — resets in 24h"
+                  : `${gamesRemaining} of ${gamesLimit} games left today`
+              }
+            >
+              <span aria-hidden="true">🎮</span>
+              <span className="header-quota-label">
+                {gamesRemaining}/{gamesLimit} left
+              </span>
+            </div>
+          )}
+
           <button
             onClick={onWordOfTheDay}
             disabled={disabled}
@@ -234,5 +269,29 @@ const styles: Record<string, React.CSSProperties> = {
     height: "22px",
     background: "var(--border)",
     margin: "0 2px",
+  },
+  quotaBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 12px",
+    borderRadius: "999px",
+    background: "rgba(78, 205, 196, 0.12)",
+    color: "var(--accent3, #4ecdc4)",
+    border: "1px solid rgba(78, 205, 196, 0.35)",
+    fontSize: "12px",
+    fontWeight: 700,
+    letterSpacing: "0.3px",
+    marginRight: "4px",
+  },
+  quotaBadgeLow: {
+    background: "rgba(255, 182, 72, 0.14)",
+    color: "#ffb648",
+    border: "1px solid rgba(255, 182, 72, 0.4)",
+  },
+  quotaBadgeExhausted: {
+    background: "rgba(255, 77, 109, 0.14)",
+    color: "#ff4d6d",
+    border: "1px solid rgba(255, 77, 109, 0.4)",
   },
 };

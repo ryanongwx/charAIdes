@@ -14,6 +14,8 @@ import celebrateRouter from "./routes/celebrate";
 import wordRouter from "./routes/word";
 import generateWordRouter from "./routes/generateWord";
 import wordOfTheDayRouter from "./routes/wordOfTheDay";
+import startGameRouter from "./routes/startGame";
+import { sweepExpired } from "./lib/gameLimiter";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -40,15 +42,30 @@ const limiter = rateLimit({
   message: { error: "Too many requests, please try again later." },
 });
 
-app.use(cors({ exposedHeaders: ["X-Guess-Text", "X-Celebration-Text"] }));
+app.use(
+  cors({
+    exposedHeaders: [
+      "X-Guess-Text",
+      "X-Celebration-Text",
+      "X-Games-Limit",
+      "X-Games-Remaining",
+      "X-Games-Reset-At",
+    ],
+  })
+);
 app.use(limiter);
 app.use(express.json({ limit: "10mb" }));
 
+app.use("/api/start-game", startGameRouter);
 app.use("/api/guess", guessRouter);
 app.use("/api/celebrate", celebrateRouter);
 app.use("/api/word", wordRouter);
 app.use("/api/generate-word", generateWordRouter);
 app.use("/api/word-of-the-day", wordOfTheDayRouter);
+
+// Evict expired per-IP entries every 15 minutes so the in-memory map
+// doesn't grow unbounded on long-running processes.
+setInterval(sweepExpired, 15 * 60 * 1000).unref();
 
 app.get("/health", (_req, res) => {
   res.json({
