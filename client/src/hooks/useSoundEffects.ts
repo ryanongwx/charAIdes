@@ -11,6 +11,18 @@ export function useSoundEffects() {
     return audioContextRef.current;
   }, []);
 
+  /**
+   * Resume the AudioContext. On iOS the context is created in a
+   * "suspended" state and will silently no-op until resume() is called
+   * from inside a user gesture. Safe to call multiple times.
+   */
+  const resume = useCallback(() => {
+    const ctx = getContext();
+    if (ctx.state === "suspended") {
+      void ctx.resume().catch(() => { /* ignore */ });
+    }
+  }, [getContext]);
+
   const playClick = useCallback(() => {
     const ctx = getContext();
     const osc = ctx.createOscillator();
@@ -77,5 +89,5 @@ export function useSoundEffects() {
     osc.stop(ctx.currentTime + 0.05);
   }, [getContext]);
 
-  return { playClick, playSuccess, playError, playDraw };
+  return { playClick, playSuccess, playError, playDraw, resume };
 }

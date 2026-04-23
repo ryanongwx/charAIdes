@@ -33,9 +33,9 @@ type LoadingState =
 
 export default function App() {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
-  const { fetchAndPlay, stop: stopAudio } = useAudio();
+  const { fetchAndPlay, stop: stopAudio, prime: primeAudio } = useAudio();
   const { stats, recordGame, resetStats } = useGameStats();
-  const { playClick, playSuccess, playError, playDraw } = useSoundEffects();
+  const { playClick, playSuccess, playError, playDraw, resume: resumeSfx } = useSoundEffects();
   const { showToast } = useToast();
   const [loadingState, setLoadingState] = useState<LoadingState>({ type: "none" });
   const [showStats, setShowStats] = useState(false);
@@ -49,6 +49,31 @@ export default function App() {
   const unchangedTicksRef = useRef(0);
   const loadingAbortRef = useRef<AbortController | null>(null);
   const beginRoundRef = useRef<(d?: Difficulty) => void | Promise<void>>(() => {});
+  // Track whether we've already surfaced a one-time "audio blocked"
+  // hint so we don't spam it on every guess.
+  const audioBlockedNoticeShownRef = useRef(false);
+
+  // One-shot audio unlock: mobile browsers (iOS Safari, mobile Chrome)
+  // block HTML5 Audio.play() and keep AudioContext suspended until the
+  // user has interacted with the page. The auto-guess loop fires from
+  // setTimeout so it's NOT in a gesture — without this prime, every
+  // guess response would fail to play and (previously) incorrectly
+  // trigger a "Couldn't reach the AI" toast.
+  useEffect(() => {
+    const unlock = () => {
+      primeAudio();
+      resumeSfx();
+    };
+    const opts = { once: true, capture: true, passive: true } as AddEventListenerOptions;
+    window.addEventListener("pointerdown", unlock, opts);
+    window.addEventListener("touchstart", unlock, opts);
+    window.addEventListener("keydown", unlock, opts);
+    return () => {
+      window.removeEventListener("pointerdown", unlock, opts);
+      window.removeEventListener("touchstart", unlock, opts);
+      window.removeEventListener("keydown", unlock, opts);
+    };
+  }, [primeAudio, resumeSfx]);
 
   const {
     phase,
@@ -90,11 +115,23 @@ export default function App() {
       const hint = hintUsed && wordEntry ? `Category: ${wordEntry.category}` : undefined;
       const canvasChanged = opts?.canvasChanged ?? true;
 
-      const { guessText } = await fetchAndPlay(apiUrl("/api/guess"), {
+      const { guessText, audioOk } = await fetchAndPlay(apiUrl("/api/guess"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image, guessHistory, hint, canvasChanged }),
       });
+
+      // One-time, non-blocking notice when the browser blocked audio
+      // playback (typically mobile autoplay policy). Game still works;
+      // guesses show in the chip + chat. We only nudge the user once.
+      if (!audioOk && guessText && !audioBlockedNoticeShownRef.current) {
+        audioBlockedNoticeShownRef.current = true;
+        showToast(
+          "🔇 Voice disabled by your browser — tap anywhere to enable.",
+          "info",
+          4000
+        );
+      }
 
       if (guessText) {
         const correct = addGuess(guessText);
@@ -120,6 +157,8 @@ export default function App() {
       }
     } catch (err) {
       if ((err as Error)?.name === "AbortError") return;
+      // Only reach this branch on real fetch/network failures —
+      // fetchAndPlay no longer throws for audio playback issues.
       console.error("Guess failed:", err);
       showToast("Couldn't reach the AI. Check your server and API keys.", "error", 5000);
       playError();
@@ -219,6 +258,13 @@ export default function App() {
       d?: Difficulty,
       customWord?: { word: string; category: string; difficulty: Difficulty }
     ) => {
+      // Unlock mobile audio in the SAME tick as the user's gesture —
+      // before any awaits — so the auto-guess loop's future audio plays
+      // aren't rejected by browser autoplay policy. Both calls are
+      // idempotent and cheap.
+      primeAudio();
+      resumeSfx();
+
       // Enforce the per-day quota BEFORE kicking off the round (and before
       // any further API calls the round triggers — e.g. guess vision calls).
       try {
@@ -287,6 +333,8 @@ export default function App() {
       playClick,
       playError,
       stopAudio,
+      primeAudio,
+      resumeSfx,
       difficulty,
       showToast,
     ]
