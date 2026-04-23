@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import type { GuessEntry } from "../hooks/useGameState";
 
 interface GuessPanelProps {
@@ -6,11 +6,38 @@ interface GuessPanelProps {
   isGuessing: boolean;
 }
 
-export default function GuessPanel({ guesses, isGuessing }: GuessPanelProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+// Distance from the bottom (px) within which we consider the user
+// "stuck to bottom" and still want to auto-follow new guesses.
+const STICK_TO_BOTTOM_THRESHOLD = 80;
 
+export default function GuessPanel({ guesses, isGuessing }: GuessPanelProps) {
+  const listRef = useRef<HTMLDivElement>(null);
+  // Track whether the user has scrolled up to read. While "stuck" we
+  // auto-follow new guesses; otherwise we leave their scroll position alone.
+  const stuckToBottomRef = useRef(true);
+
+  // Track the user's scroll intent so we never yank them back to the
+  // bottom if they've deliberately scrolled up.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+      stuckToBottomRef.current = distance <= STICK_TO_BOTTOM_THRESHOLD;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Auto-scroll the INTERNAL list container only. Never call
+  // scrollIntoView — that walks the whole scroll ancestor chain and
+  // on mobile it drags the entire document down to the panel,
+  // interrupting drawing every time the AI speaks.
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    if (!stuckToBottomRef.current) return;
+    el.scrollTop = el.scrollHeight;
   }, [guesses, isGuessing]);
 
   return (
@@ -23,7 +50,13 @@ export default function GuessPanel({ guesses, isGuessing }: GuessPanelProps) {
         )}
       </div>
 
-      <div style={styles.list} role="log" aria-live="polite" aria-label="Guess history">
+      <div
+        ref={listRef}
+        style={styles.list}
+        role="log"
+        aria-live="polite"
+        aria-label="Guess history"
+      >
         {guesses.length === 0 && !isGuessing && (
           <div style={styles.empty}>
             <div style={styles.emptyIcon} aria-hidden="true">🎨</div>
@@ -67,8 +100,6 @@ export default function GuessPanel({ guesses, isGuessing }: GuessPanelProps) {
             </span>
           </div>
         )}
-
-        <div ref={bottomRef} />
       </div>
     </div>
   );

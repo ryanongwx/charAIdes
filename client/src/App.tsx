@@ -8,6 +8,7 @@ import StatsPanel from "./components/StatsPanel";
 import ShortcutsPanel from "./components/ShortcutsPanel";
 import LoadingIndicator from "./components/LoadingIndicator";
 import RateLimitModal from "./components/RateLimitModal";
+import LatestGuessChip from "./components/LatestGuessChip";
 import { useGameState } from "./hooks/useGameState";
 import { useAudio } from "./hooks/useAudio";
 import { useGameStats } from "./hooks/useGameStats";
@@ -538,6 +539,14 @@ export default function App() {
           ) : null}
 
           {canDraw && <TimerBar timeLeft={timeLeft} />}
+
+          {!isIdle && (
+            <LatestGuessChip
+              guesses={guesses}
+              isGuessing={isGuessing}
+              visible={!isIdle && !isOver}
+            />
+          )}
 
           <DrawingCanvas
             ref={canvasRef}

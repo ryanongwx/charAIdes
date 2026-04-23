@@ -193,6 +193,21 @@ button:disabled {
   100% { transform: translate3d(-2%, 2%, 0)   scale(1); }
 }
 
+@keyframes chipPop {
+  0%   { transform: translateY(-4px); opacity: 0; }
+  60%  { transform: translateY(1px);  opacity: 1; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+
+/* ======================================================================
+   Responsive helpers
+   ====================================================================== */
+
+/* The mobile-only chip that surfaces the latest AI guess above the
+   canvas. Hidden by default (desktop already shows the full panel);
+   turned on inside the <=768px breakpoint below. */
+.mobile-only { display: none !important; }
+
 /* ======================================================================
    Responsive breakpoints
    ====================================================================== */
@@ -213,9 +228,22 @@ button:disabled {
 @media (max-width: 768px) {
   html { font-size: 15px; }
 
+  /* The whole page is scrollable on phones because content stacks
+     vertically, but we want any programmatic scroll (e.g. jump-to-top)
+     to be instant so it can't be mistaken for an interruption while the
+     user is drawing. Inner lists still smooth-scroll themselves.       */
+  html { scroll-behavior: auto; }
+
   #root { overflow-y: auto; }
 
-  body { overflow: auto; }
+  body {
+    overflow: auto;
+    /* Prevent horizontal jiggle from long guess text / chips.           */
+    overflow-x: hidden;
+    /* iOS: keep pinch/zoom away from the drawing surface by disabling
+       user scaling is too aggressive; instead we make the canvas own
+       its touches via touch-action: none on the element itself.        */
+  }
 
   .app-root {
     height: auto !important;
@@ -238,8 +266,10 @@ button:disabled {
     overflow: visible !important;
   }
 
+  /* Shorter panel on phones — full history is still scrollable
+     internally, but we don't steal as much viewport below the canvas.  */
   .game-right-col {
-    height: 300px;
+    height: 240px;
   }
 
   .game-controls {
@@ -264,6 +294,12 @@ button:disabled {
   .app-header .header-emoji { font-size: 26px !important; }
   .app-header .header-action-label { display: none; }
   .app-header .header-action-btn { padding: 7px 10px !important; }
+  /* Quota badge stays visible on phones but shrinks so it doesn't
+     push the action buttons onto a second row.                         */
+  .app-header .header-quota-badge {
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+  }
 
   /* Start strip stacks vertically on mobile */
   .start-strip-inner {
@@ -285,6 +321,14 @@ button:disabled {
     gap: 8px !important;
   }
   .canvas-toolbar .toolbar-divider { display: none; }
+
+  /* Enable mobile-only helpers (e.g. latest-guess chip above canvas). */
+  .mobile-only { display: flex !important; }
+
+  .latest-guess-chip {
+    align-self: flex-start;
+    max-width: 100%;
+  }
 }
 
 /* Small phones: <= 480px */
@@ -297,6 +341,7 @@ button:disabled {
   .app-header .header-diff-btn {
     padding: 7px 10px !important;
   }
+  .app-header .header-quota-suffix { display: none; }
 
   .game-controls > button {
     font-size: 13px !important;

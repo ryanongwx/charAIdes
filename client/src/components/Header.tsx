@@ -93,7 +93,8 @@ export default function Header({
             >
               <span aria-hidden="true">🎮</span>
               <span className="header-quota-label">
-                {gamesRemaining}/{gamesLimit} left
+                {gamesRemaining}/{gamesLimit}
+                <span className="header-quota-suffix">&nbsp;left</span>
               </span>
             </div>
           )}
