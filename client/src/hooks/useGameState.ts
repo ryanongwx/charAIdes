@@ -57,8 +57,13 @@ export function useGameState() {
     return () => clearTimer();
   }, [clearTimer]);
 
+  // Stop the interval as soon as the game ends so it doesn't keep calling setPhase("LOST")
+  useEffect(() => {
+    if (phase === "LOST" || phase === "WON") clearTimer();
+  }, [phase, clearTimer]);
+
   const startRound = useCallback(
-    async (selectedDifficulty?: Difficulty) => {
+    async (selectedDifficulty?: Difficulty, signal?: AbortSignal) => {
       const diff = selectedDifficulty ?? difficulty;
       setDifficulty(diff);
       setGuesses([]);
@@ -66,7 +71,7 @@ export function useGameState() {
       setWordEntry(null);
       clearTimer();
 
-      const res = await fetch(`/api/word?difficulty=${diff}`);
+      const res = await fetch(`/api/word?difficulty=${diff}`, { signal });
       if (!res.ok) {
         setPhase("IDLE");
         throw new Error(`Failed to fetch word (${res.status})`);
@@ -90,19 +95,6 @@ export function useGameState() {
       startTimer();
     },
     [setDifficulty, startTimer, clearTimer]
-  );
-
-  const startCustomRound = useCallback(
-    (entry: WordEntry) => {
-      setDifficulty(entry.difficulty);
-      setGuesses([]);
-      setHintUsed(false);
-      clearTimer();
-      setWordEntry(entry);
-      setPhase("DRAWING");
-      startTimer();
-    },
-    [startTimer, clearTimer]
   );
 
   const addGuess = useCallback(

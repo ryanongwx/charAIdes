@@ -77,14 +77,82 @@ button:focus-visible {
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
   html {
     font-size: 14px;
   }
-  
+
   #root {
     overflow-y: auto;
+  }
+
+  /* Switch from side-by-side columns to stacked layout */
+  .app-root {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: auto !important;
+  }
+
+  .game-main {
+    flex-direction: column !important;
+    overflow: visible !important;
+    padding: 12px !important;
+  }
+
+  .game-left-col {
+    flex: none !important;
+    overflow-y: visible !important;
+  }
+
+  /* Guess panel gets a fixed height below the canvas */
+  .game-right-col {
+    flex: none !important;
+    height: 260px;
+    min-width: 0 !important;
+  }
+
+  .game-controls {
+    justify-content: flex-start;
+  }
+}
+
+/* Toast mobile styles */
+@media (max-width: 480px) {
+  .toast-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+
+  .toast-container > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 }
 

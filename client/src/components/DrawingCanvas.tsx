@@ -27,15 +27,20 @@ const BRUSH_SIZES = [
   { label: "L", size: 20 },
 ];
 
+const HISTORY_CAP = 10;
+
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
   ({ disabled = false, thinking = false, onStrokeStart, onStrokeEnd, onHistoryChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [color, setColor] = useState("#000000");
     const [brushSize, setBrushSize] = useState(10);
+    const [isErasing, setIsErasing] = useState(false);
     const [history, setHistory] = useState<ImageData[]>([]);
     const [hasDrawn, setHasDrawn] = useState(false);
     const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+    const activeColor = isErasing ? "#ffffff" : color;
 
     useEffect(() => {
       onHistoryChange?.(history.length > 0, !hasDrawn);
@@ -109,7 +114,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       const ctx = canvas?.getContext("2d");
       if (!canvas || !ctx) return;
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      setHistory((prev) => [...prev.slice(-19), imageData]);
+      setHistory((prev) => [...prev.slice(-(HISTORY_CAP - 1)), imageData]);
     }, []);
 
     const startDraw = useCallback(
@@ -128,11 +133,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         if (ctx) {
           ctx.beginPath();
           ctx.arc(pos.x, pos.y, brushSize / 2, 0, Math.PI * 2);
-          ctx.fillStyle = color;
+          ctx.fillStyle = activeColor;
           ctx.fill();
         }
       },
-      [disabled, getPos, saveHistory, brushSize, color, onStrokeStart]
+      [disabled, getPos, saveHistory, brushSize, activeColor, onStrokeStart]
     );
 
     const draw = useCallback(
@@ -148,7 +153,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         ctx.beginPath();
         ctx.moveTo(lastPos.current.x, lastPos.current.y);
         ctx.lineTo(pos.x, pos.y);
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = activeColor;
         ctx.lineWidth = brushSize;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
@@ -156,7 +161,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
         lastPos.current = pos;
       },
-      [isDrawing, disabled, getPos, color, brushSize]
+      [isDrawing, disabled, getPos, activeColor, brushSize]
     );
 
     const stopDraw = useCallback(() => {
@@ -167,8 +172,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       lastPos.current = null;
     }, [isDrawing, onStrokeEnd]);
 
-    const canUndo = history.length > 0;
-
     return (
       <div style={styles.wrapper}>
         <div style={styles.toolbar}>
@@ -176,14 +179,16 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             {COLORS.map((c) => (
               <button
                 key={c}
-                onClick={() => setColor(c)}
+                onClick={() => { setColor(c); setIsErasing(false); }}
                 aria-label={`Select color ${c}`}
-                aria-pressed={color === c}
+                aria-pressed={!isErasing && color === c}
                 style={{
                   ...styles.colorSwatch,
                   background: c,
-                  border: color === c ? "3px solid var(--accent3)" : "2px solid var(--border)",
-                  transform: color === c ? "scale(1.2)" : "scale(1)",
+                  border: !isErasing && color === c
+                    ? "3px solid var(--accent3)"
+                    : "2px solid var(--border)",
+                  transform: !isErasing && color === c ? "scale(1.2)" : "scale(1)",
                 }}
               />
             ))}
@@ -224,12 +229,27 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
                 return next;
               });
             }}
-            disabled={!canUndo || disabled}
-            style={{ ...styles.actionBtn, opacity: !canUndo || disabled ? 0.5 : 1 }}
+            disabled={history.length === 0 || disabled}
+            style={{ ...styles.actionBtn, opacity: history.length === 0 || disabled ? 0.5 : 1 }}
             aria-label="Undo last stroke"
-            title="Undo"
+            title="Undo (Ctrl/Cmd+Z)"
           >
             ↩ Undo
+          </button>
+
+          <button
+            onClick={() => setIsErasing((e) => !e)}
+            aria-pressed={isErasing}
+            aria-label="Toggle eraser"
+            title="Eraser"
+            style={{
+              ...styles.actionBtn,
+              background: isErasing ? "var(--accent3)" : "var(--surface)",
+              color: isErasing ? "#000" : "var(--text-muted)",
+              border: isErasing ? "1px solid var(--accent3)" : "1px solid var(--border)",
+            }}
+          >
+            ⬜ Erase
           </button>
         </div>
 
@@ -240,7 +260,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             height={420}
             style={{
               ...styles.canvas,
-              cursor: disabled ? "not-allowed" : "crosshair",
+              cursor: disabled ? "not-allowed" : isErasing ? "cell" : "crosshair",
               opacity: disabled ? 0.7 : 1,
               maxHeight: "420px",
             }}
@@ -251,6 +271,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             onTouchStart={startDraw}
             onTouchMove={draw}
             onTouchEnd={stopDraw}
+            onTouchCancel={stopDraw}
             aria-label="Drawing canvas"
             role="img"
           />
@@ -335,19 +356,6 @@ const styles: Record<string, React.CSSProperties> = {
     height: "auto",
     touchAction: "none",
     boxShadow: "var(--shadow)",
-  },
-  disabledOverlay: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "rgba(15,15,26,0.5)",
-    borderRadius: "var(--radius)",
-    fontSize: "18px",
-    color: "var(--text)",
-    fontWeight: 600,
-    backdropFilter: "blur(2px)",
   },
   thinkingBadge: {
     position: "absolute",

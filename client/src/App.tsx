@@ -6,27 +6,33 @@ import TimerBar from "./components/TimerBar";
 import ResultOverlay from "./components/ResultOverlay";
 import StatsPanel from "./components/StatsPanel";
 import ShortcutsPanel from "./components/ShortcutsPanel";
+import LoadingIndicator from "./components/LoadingIndicator";
 import { useGameState } from "./hooks/useGameState";
 import { useAudio } from "./hooks/useAudio";
 import { useGameStats } from "./hooks/useGameStats";
 import { useSoundEffects } from "./hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useToast } from "./contexts/ToastContext";
 import type { Difficulty } from "./hooks/useGameState";
 
 const AUTO_GUESS_MIN_MS = 2000;
 const AUTO_GUESS_MAX_MS = 5000;
-// When the canvas hasn't changed since the last guess, give the player a beat
-// longer between blurts — feels less like the AI is shouting over them.
 const UNCHANGED_EXTRA_PER_TICK_MS = 800;
 const UNCHANGED_MAX_EXTRA_MS = 3000;
+
+type LoadingState = 
+  | { type: "none" }
+  | { type: "word-bank"; difficulty: Difficulty }
+  | { type: "ai-generate"; difficulty: Difficulty }
+  | { type: "word-of-day" };
 
 export default function App() {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const { fetchAndPlay, stop: stopAudio } = useAudio();
   const { stats, recordGame, resetStats } = useGameStats();
   const { playClick, playSuccess, playError, playDraw } = useSoundEffects();
-  const [error, setError] = useState<string | null>(null);
-  const [isLoadingWord, setIsLoadingWord] = useState(false);
+  const { showToast } = useToast();
+  const [loadingState, setLoadingState] = useState<LoadingState>({ type: "none" });
   const [showStats, setShowStats] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
@@ -34,6 +40,8 @@ export default function App() {
   const gameRecordedRef = useRef(false);
   const lastGuessedSigRef = useRef<string | null>(null);
   const unchangedTicksRef = useRef(0);
+  const loadingAbortRef = useRef<AbortController | null>(null);
+  const beginRoundRef = useRef<(d?: Difficulty) => void>(() => {});
 
   const {
     phase,
@@ -65,7 +73,6 @@ export default function App() {
     const canvas = canvasRef.current;
     if (!canvas || canvas.isEmpty()) return;
 
-    setError(null);
     setGuessing(true);
 
     try {
@@ -107,7 +114,7 @@ export default function App() {
     } catch (err) {
       if ((err as Error)?.name === "AbortError") return;
       console.error("Guess failed:", err);
-      setError("Couldn't reach the AI. Check your server and API keys.");
+      showToast("Couldn't reach the AI. Check your server and API keys.", "error", 5000);
       playError();
     } finally {
       setGuessing(false);
@@ -123,10 +130,10 @@ export default function App() {
     playSuccess,
     playError,
     recordGame,
+    showToast,
   ]);
 
-  // Auto-guess loop: while in DRAWING phase, every 2-5s, fire a guess if the
-  // canvas has new content. Skips when canvas is empty or unchanged.
+  // Auto-guess loop
   useEffect(() => {
     if (phase !== "DRAWING") return;
 
@@ -147,7 +154,6 @@ export default function App() {
       if (cancelled) return;
       const c = canvasRef.current;
       if (!c || c.isEmpty()) {
-        // Nothing to react to — reset the stuck counter and try again later.
         unchangedTicksRef.current = 0;
         schedule();
         return;
@@ -156,8 +162,6 @@ export default function App() {
       const changed = sig !== lastGuessedSigRef.current;
       unchangedTicksRef.current = changed ? 0 : unchangedTicksRef.current + 1;
       lastGuessedSigRef.current = sig;
-      // Fire the guess either way — let the AI reconsider, ask for more,
-      // or express confusion when the drawing is static.
       void performGuess({ canvasChanged: changed });
     };
 
@@ -169,12 +173,14 @@ export default function App() {
     };
   }, [phase, performGuess]);
 
+  // Handle game lost
   useEffect(() => {
     if (phase !== "LOST" || !wordEntry) return;
     if (gameRecordedRef.current) return;
     gameRecordedRef.current = true;
 
     recordGame(false, guessCount);
+    showToast(`⏰ Time's up! The word was "${wordEntry.word}"`, "warning", 5000);
 
     let cancelled = false;
     (async () => {
@@ -192,14 +198,19 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [phase, wordEntry, guessCount, fetchAndPlay, recordGame]);
+  }, [phase, wordEntry, guessCount, fetchAndPlay, recordGame, showToast]);
+
+  // Handle game won
+  useEffect(() => {
+    if (phase === "WON") {
+      showToast(`🎉 You won in ${guessCount} guesses!`, "success", 5000);
+    }
+  }, [phase, guessCount, showToast]);
 
   const beginRound = useCallback(
     (d?: Difficulty, customWord?: { word: string; category: string; difficulty: Difficulty }) => {
       stopAudio();
       canvasRef.current?.clear();
-      setIsLoadingWord(true);
-      setError(null);
       gameRecordedRef.current = false;
       lastGuessedSigRef.current = null;
       unchangedTicksRef.current = 0;
@@ -207,117 +218,139 @@ export default function App() {
 
       if (customWord) {
         startCustomRound(customWord);
-        setIsLoadingWord(false);
+        setLoadingState({ type: "none" });
       } else {
-        startRound(d)
-          .catch(() => {
-            setError("Failed to start game. Check your connection and server.");
+        const targetDiff = d ?? difficulty;
+
+        // Cancel any previous in-flight request
+        loadingAbortRef.current?.abort();
+        const controller = new AbortController();
+        loadingAbortRef.current = controller;
+
+        setLoadingState({ type: "word-bank", difficulty: targetDiff });
+
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          setLoadingState({ type: "none" });
+          showToast("Request timed out.", "error", 8000, {
+            label: "Retry",
+            onClick: () => beginRoundRef.current(d),
+          });
+        }, 15000);
+
+        startRound(d, controller.signal)
+          .catch((err) => {
+            if ((err as Error)?.name === "AbortError") return;
+            showToast("Failed to start game.", "error", 8000, {
+              label: "Retry",
+              onClick: () => beginRoundRef.current(d),
+            });
             playError();
           })
-          .finally(() => setIsLoadingWord(false));
+          .finally(() => {
+            clearTimeout(timeoutId);
+            setLoadingState({ type: "none" });
+            loadingAbortRef.current = null;
+          });
       }
     },
-    [startRound, startCustomRound, playClick, playError, stopAudio]
+    [startRound, startCustomRound, playClick, playError, stopAudio, difficulty, showToast]
   );
+
+  // Keep ref current so retry closures always call the latest version
+  beginRoundRef.current = beginRound;
 
   const handleGenerateWord = useCallback(async () => {
     if (!isIdle && !isOver) return;
-    
-    setIsLoadingWord(true);
-    setError(null);
+
+    loadingAbortRef.current?.abort();
+    const controller = new AbortController();
+    loadingAbortRef.current = controller;
+
+    setLoadingState({ type: "ai-generate", difficulty });
     playClick();
-    
+
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      setLoadingState({ type: "none" });
+      showToast("Request timed out. Falling back to word bank.", "error", 5000);
+      playError();
+      beginRound(difficulty);
+    }, 20000);
+
     try {
       const res = await fetch("/api/generate-word", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ difficulty }),
+        signal: controller.signal,
       });
-      
+
       if (!res.ok) throw new Error("Failed to generate word");
-      
+
       const word = await res.json();
+      showToast(`✨ AI generated: "${word.word}"`, "success");
       beginRound(undefined, word);
     } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       console.error("Generate word failed:", err);
-      setError("Failed to generate AI word. Using word bank instead.");
+      showToast("Failed to generate AI word. Using word bank instead.", "error");
       playError();
       beginRound(difficulty);
+    } finally {
+      clearTimeout(timeoutId);
+      setLoadingState({ type: "none" });
+      loadingAbortRef.current = null;
     }
-  }, [isIdle, isOver, difficulty, playClick, playError, beginRound]);
+  }, [isIdle, isOver, difficulty, playClick, playError, beginRound, showToast]);
 
   const handleWordOfTheDay = useCallback(async () => {
     if (!isIdle && !isOver) return;
-    
-    setIsLoadingWord(true);
-    setError(null);
+
+    loadingAbortRef.current?.abort();
+    const controller = new AbortController();
+    loadingAbortRef.current = controller;
+
+    setLoadingState({ type: "word-of-day" });
     playClick();
-    
-    try {
-      const res = await fetch("/api/word-of-the-day");
-      
-      if (!res.ok) throw new Error("Failed to get word of the day");
-      
-      const word = await res.json();
-      beginRound(undefined, word);
-    } catch (err) {
-      console.error("Word of the day failed:", err);
-      setError("Failed to get word of the day. Using word bank instead.");
+
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      setLoadingState({ type: "none" });
+      showToast("Request timed out. Falling back to word bank.", "error", 5000);
       playError();
       beginRound(difficulty);
+    }, 15000);
+
+    try {
+      const res = await fetch("/api/word-of-the-day", { signal: controller.signal });
+
+      if (!res.ok) throw new Error("Failed to get word of the day");
+
+      const word = await res.json();
+      showToast(`📅 Word of the Day: "${word.word}"`, "success");
+      beginRound(undefined, word);
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
+      console.error("Word of the day failed:", err);
+      showToast("Failed to get word of the day. Using word bank instead.", "error");
+      playError();
+      beginRound(difficulty);
+    } finally {
+      clearTimeout(timeoutId);
+      setLoadingState({ type: "none" });
+      loadingAbortRef.current = null;
     }
-  }, [isIdle, isOver, difficulty, playClick, playError, beginRound]);
+  }, [isIdle, isOver, difficulty, playClick, playError, beginRound, showToast]);
+
+  const handleCancelLoading = useCallback(() => {
+    loadingAbortRef.current?.abort();
+    loadingAbortRef.current = null;
+    setLoadingState({ type: "none" });
+  }, []);
 
   const handlePlayAgain = useCallback(() => beginRound(difficulty), [beginRound, difficulty]);
   const handleStartGame = useCallback(() => beginRound(), [beginRound]);
-
-  const handleGenerateWord = useCallback(async () => {
-    if (!isIdle && !isOver) return;
-    
-    setIsLoadingWord(true);
-    setError(null);
-    playClick();
-
-    try {
-      const res = await fetch("/api/generate-word", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ difficulty }),
-      });
-
-      if (!res.ok) throw new Error("Failed to generate word");
-
-      const data = await res.json();
-      beginRound(undefined, data);
-    } catch (err) {
-      console.error("Generate word failed:", err);
-      setError("Failed to generate AI word. Check your connection.");
-      playError();
-      setIsLoadingWord(false);
-    }
-  }, [isIdle, isOver, difficulty, beginRound, playClick, playError]);
-
-  const handleWordOfTheDay = useCallback(async () => {
-    if (!isIdle && !isOver) return;
-    
-    setIsLoadingWord(true);
-    setError(null);
-    playClick();
-
-    try {
-      const res = await fetch("/api/word-of-the-day");
-
-      if (!res.ok) throw new Error("Failed to get word of the day");
-
-      const data = await res.json();
-      beginRound(undefined, data);
-    } catch (err) {
-      console.error("Word of the day failed:", err);
-      setError("Failed to get word of the day. Check your connection.");
-      playError();
-      setIsLoadingWord(false);
-    }
-  }, [isIdle, isOver, beginRound, playClick, playError]);
 
   const handleDifficultyChange = useCallback(
     (d: Difficulty) => {
@@ -330,24 +363,27 @@ export default function App() {
   const handleUndo = useCallback(() => {
     if (canUndo) {
       canvasRef.current?.undo();
+      showToast("↩ Undone", "info", 1500);
       playClick();
     }
-  }, [canUndo, playClick]);
+  }, [canUndo, playClick, showToast]);
 
   const handleClear = useCallback(() => {
     canvasRef.current?.clear();
     lastGuessedSigRef.current = null;
+    showToast("🗑️ Canvas cleared", "info");
     playClick();
-  }, [playClick]);
+  }, [playClick, showToast]);
 
   const handleHint = useCallback(() => {
     useHint();
+    showToast(`💡 Hint: Category is "${wordEntry?.category}"`, "info");
     playClick();
-  }, [useHint, playClick]);
+  }, [useHint, wordEntry, playClick, showToast]);
 
   const handleGuessNow = useCallback(() => {
     if (!canvasRef.current || canvasRef.current.isEmpty()) {
-      setError("Draw something first!");
+      showToast("Draw something first!", "warning");
       playError();
       return;
     }
@@ -358,7 +394,7 @@ export default function App() {
     unchangedTicksRef.current = changed ? 0 : unchangedTicksRef.current + 1;
     lastGuessedSigRef.current = sig;
     void performGuess({ canvasChanged: changed });
-  }, [isGuessing, performGuess, playClick, playError]);
+  }, [isGuessing, performGuess, playClick, playError, showToast]);
 
   useKeyboardShortcuts(
     {
@@ -386,9 +422,10 @@ export default function App() {
   }, [showStats, showShortcuts]);
 
   const canDraw = isDrawing || isGuessing;
+  const isLoading = loadingState.type !== "none";
 
   return (
-    <div style={styles.app}>
+    <div style={styles.app} className="app-root">
       <Header
         difficulty={difficulty}
         onDifficultyChange={handleDifficultyChange}
@@ -399,8 +436,8 @@ export default function App() {
         onWordOfTheDay={handleWordOfTheDay}
       />
 
-      <main style={styles.main}>
-        <div style={styles.leftCol}>
+      <main style={styles.main} className="game-main">
+        <div style={styles.leftCol} className="game-left-col">
           {wordEntry && !isIdle && (
             <div style={styles.wordCard}>
               <div style={styles.wordMeta}>
@@ -424,21 +461,21 @@ export default function App() {
             onHistoryChange={handleCanvasHistory}
           />
 
-          <div style={styles.controls}>
+          <div style={styles.controls} className="game-controls">
             {isIdle ? (
               <button
                 onClick={handleStartGame}
-                disabled={isLoadingWord}
+                disabled={isLoading}
                 style={{
                   ...styles.btn,
                   ...styles.btnPrimary,
                   fontSize: "18px",
                   padding: "16px 40px",
-                  ...(isLoadingWord ? styles.btnDisabled : {}),
+                  ...(isLoading ? styles.btnDisabled : {}),
                 }}
                 title="Start game (S)"
               >
-                {isLoadingWord ? "⏳ Loading..." : "🎮 Start Game"}
+                {isLoading ? "⏳ Loading..." : "🎮 Start Game"}
               </button>
             ) : (
               <>
@@ -471,20 +508,6 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={handleUndo}
-                  disabled={!canUndo || isOver}
-                  style={{
-                    ...styles.btn,
-                    ...styles.btnGhost,
-                    ...(!canUndo ? styles.btnDisabled : {}),
-                  }}
-                  aria-label="Undo last stroke"
-                  title="Undo (Ctrl/Cmd+Z)"
-                >
-                  ↩ Undo
-                </button>
-
-                <button
                   onClick={handleClear}
                   disabled={isOver || canvasEmpty}
                   style={{
@@ -500,18 +523,14 @@ export default function App() {
               </>
             )}
           </div>
-
-          {error && (
-            <div style={styles.errorBanner} role="alert">
-              ⚠️ {error}
-            </div>
-          )}
         </div>
 
-        <div style={styles.rightCol}>
+        <div style={styles.rightCol} className="game-right-col">
           <GuessPanel guesses={guesses} isGuessing={isGuessing} />
         </div>
       </main>
+
+      <LoadingIndicator state={loadingState} onCancel={isLoading ? handleCancelLoading : undefined} />
 
       <ResultOverlay
         phase={phase}
@@ -525,10 +544,9 @@ export default function App() {
           stats={stats}
           onClose={() => setShowStats(false)}
           onReset={() => {
-            if (confirm("Are you sure you want to reset all stats?")) {
-              resetStats();
-              playClick();
-            }
+            resetStats();
+            playClick();
+            showToast("Stats have been reset", "info", 2500);
           }}
         />
       )}
@@ -648,14 +666,5 @@ const styles: Record<string, React.CSSProperties> = {
   btnDisabled: {
     opacity: 0.5,
     cursor: "not-allowed",
-  },
-  errorBanner: {
-    background: "rgba(233,69,96,0.15)",
-    border: "1px solid var(--accent)",
-    borderRadius: "8px",
-    padding: "10px 14px",
-    fontSize: "13px",
-    color: "var(--accent)",
-    animation: "shake 0.5s ease",
   },
 };

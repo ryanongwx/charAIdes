@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface ShortcutHandlers {
   onGuess?: () => void;
@@ -22,6 +22,11 @@ const isButtonTarget = (target: EventTarget | null): boolean =>
   (target instanceof HTMLElement && target.getAttribute("role") === "button");
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers, enabled: boolean = true) {
+  // Keep a stable ref so the effect closure always calls the latest handlers
+  // without needing to re-register the event listener on every render.
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
+
   useEffect(() => {
     if (!enabled) return;
 
@@ -29,41 +34,42 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers, enabled: boolea
       if (isEditableTarget(e.target)) return;
       if (e.repeat) return;
 
+      const h = handlersRef.current;
       const key = e.key;
       const lower = key.length === 1 ? key.toLowerCase() : key;
 
-      if ((e.ctrlKey || e.metaKey) && lower === "z" && handlers.onUndo) {
+      if ((e.ctrlKey || e.metaKey) && lower === "z" && h.onUndo) {
         e.preventDefault();
-        handlers.onUndo();
+        h.onUndo();
         return;
       }
 
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      if ((key === " " || key === "Enter") && !isButtonTarget(e.target) && handlers.onGuess) {
+      if ((key === " " || key === "Enter") && !isButtonTarget(e.target) && h.onGuess) {
         e.preventDefault();
-        handlers.onGuess();
+        h.onGuess();
         return;
       }
 
-      if (lower === "c" && handlers.onClear) {
+      if (lower === "c" && h.onClear) {
         e.preventDefault();
-        handlers.onClear();
+        h.onClear();
         return;
       }
-      if (lower === "h" && handlers.onHint) {
+      if (lower === "h" && h.onHint) {
         e.preventDefault();
-        handlers.onHint();
+        h.onHint();
         return;
       }
-      if (lower === "s" && handlers.onStart) {
+      if (lower === "s" && h.onStart) {
         e.preventDefault();
-        handlers.onStart();
+        h.onStart();
         return;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handlers, enabled]);
+  }, [enabled]); // only re-register when enabled changes, not on every render
 }

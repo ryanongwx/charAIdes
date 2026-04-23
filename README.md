@@ -217,10 +217,14 @@ ai-charades/
 │   │   │   ├── ErrorBoundary.tsx   # Crash recovery component
 │   │   │   ├── GuessPanel.tsx      # Scrollable AI guess history
 │   │   │   ├── Header.tsx          # Title + difficulty + stats/shortcuts buttons
+│   │   │   ├── LoadingIndicator.tsx # Smart loading overlay with specific messages
 │   │   │   ├── ResultOverlay.tsx   # Win/lose modal with confetti
 │   │   │   ├── ShortcutsPanel.tsx  # Keyboard shortcuts help modal
 │   │   │   ├── StatsPanel.tsx      # Game statistics modal
-│   │   │   └── TimerBar.tsx        # Animated countdown bar
+│   │   │   ├── TimerBar.tsx        # Animated countdown bar
+│   │   │   └── ToastContainer.tsx  # Toast notification system
+│   │   ├── contexts/
+│   │   │   └── ToastContext.tsx    # Toast state management + provider
 │   │   ├── hooks/
 │   │   │   ├── useAudio.ts         # Fetch audio blob + Web Audio playback
 │   │   │   ├── useGameState.ts     # State machine + timer logic
@@ -230,7 +234,7 @@ ai-charades/
 │   │   ├── lib/
 │   │   │   └── fuzzyMatch.ts       # Guess correctness detection
 │   │   ├── App.tsx                 # Root component + auto-guess orchestration
-│   │   ├── main.tsx                # React entry point with ErrorBoundary
+│   │   ├── main.tsx                # React entry point with ErrorBoundary + ToastProvider
 │   │   └── index.css               # Global dark theme styles + animations
 │   ├── index.html
 │   └── vite.config.ts              # Dev server + /api proxy config
@@ -240,7 +244,9 @@ ai-charades/
 │       ├── routes/
 │       │   ├── guess.ts            # POST /api/guess — vision → TTS pipeline
 │       │   ├── celebrate.ts        # POST /api/celebrate — win/lose voice line
-│       │   └── word.ts             # GET /api/word — cached random word by difficulty
+│       │   ├── word.ts             # GET /api/word — cached random word by difficulty
+│       │   ├── generateWord.ts     # POST /api/generate-word — AI word generation
+│       │   └── wordOfTheDay.ts     # GET /api/word-of-the-day — daily challenge
 │       ├── lib/
 │       │   ├── openai.ts           # GPT-4o Vision call + celebration lines
 │       │   └── elevenlabs.ts       # ElevenLabs TTS streaming
@@ -288,6 +294,8 @@ ai-charades/
 - 📊 **Stats tracking** — win rate, streaks, best scores, average guesses (saved locally)
 - ⌨️ **Keyboard shortcuts** — Space/Enter to force guess, C to clear, H for hint, Ctrl/Cmd+Z to undo
 - 🔊 **Sound effects** — satisfying audio feedback for clicks, success, errors, drawing
+- 🔔 **Toast notifications** — non-intrusive popup feedback for all actions (word loaded, hint used, canvas cleared, etc.)
+- ⏳ **Smart loading states** — specific messages for each action ("✨ AI is creating a word...", "📅 Loading Word of the Day...")
 - 📱 **Mobile responsive** — works great on phones and tablets
 - ⚡ **Performance optimized** — rate limiting, caching, smooth animations
 - 🛡️ **Error boundary** — graceful crash handling with reload option

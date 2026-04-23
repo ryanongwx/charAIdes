@@ -14,6 +14,7 @@ interface Confetti {
   color: string;
   delay: number;
   size: number;
+  duration: number;
 }
 
 export default function ResultOverlay({ phase, word, guessCount, onPlayAgain }: ResultOverlayProps) {
@@ -30,6 +31,7 @@ export default function ResultOverlay({ phase, word, guessCount, onPlayAgain }: 
         color: ["#e94560", "#f5a623", "#4ecdc4", "#f7e017", "#9b59b6"][Math.floor(Math.random() * 5)],
         delay: Math.random() * 1.5,
         size: 8 + Math.random() * 8,
+        duration: 2 + Math.random(),
       }));
       setConfetti(pieces);
     } else {
@@ -53,7 +55,7 @@ export default function ResultOverlay({ phase, word, guessCount, onPlayAgain }: 
             height: `${c.size}px`,
             background: c.color,
             borderRadius: "2px",
-            animation: `confetti-fall ${2 + Math.random()}s ${c.delay}s ease-in forwards`,
+            animation: `confetti-fall ${c.duration}s ${c.delay}s ease-in forwards`,
             zIndex: 999,
           }}
         />
