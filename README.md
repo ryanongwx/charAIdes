@@ -11,10 +11,11 @@ Built for the **Kiro × ElevenLabs Hackathon** using spec-driven development.
 ## How It Works
 
 1. Pick a difficulty and hit **Start Game** — you get a secret word to draw.
-2. Draw on the canvas using the brush tools.
-3. Hit **Guess!** — the AI analyses your drawing and speaks a conversational guess: *"Ooh, is that a flamingo?!"*
-4. Keep drawing and guessing until the AI gets it right (or time runs out).
-5. The AI celebrates with a voiced reaction when it wins.
+2. **Start drawing** — the AI watches in real-time and automatically blurts out a new spoken guess every 2–5 seconds: *"Ooh, is that a flamingo?!"*
+3. Keep adding detail. Each new stroke gives the AI fresh context, just like a real partner in Pictionary.
+4. The AI adapts its timing — if you stop drawing, it waits a bit longer before guessing again, giving you space to think.
+5. Want it to guess *right now*? Hit **⚡ Guess Now** (or Space/Enter) to skip the wait.
+6. When the AI guesses correctly (or time runs out), it reacts with a voiced celebration or playful consolation.
 
 ---
 
@@ -75,6 +76,7 @@ Open `.env` and fill in your API keys:
 ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
 PORT=3001
+ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
 ```
 
 **Where to get your keys:**
@@ -83,6 +85,7 @@ PORT=3001
 |-----|-----------------|
 | `ELEVENLABS_API_KEY` | [elevenlabs.io](https://elevenlabs.io) → click your avatar → **Profile** → **API Keys** → Create new key |
 | `OPENAI_API_KEY` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) → **Create new secret key** |
+| `ELEVENLABS_VOICE_ID` | Optional — defaults to Rachel voice. Find voice IDs at [elevenlabs.io/voice-library](https://elevenlabs.io/voice-library) |
 
 > The `.env` file is gitignored — your keys will never be committed.
 
@@ -122,13 +125,27 @@ Navigate to **[http://localhost:5173](http://localhost:5173)** in your browser.
 ## Playing the Game
 
 1. **Select a difficulty** in the top-right (Easy / Medium / Hard).
-2. Click **🎮 Start Game** — a secret word appears at the top left.
-3. **Draw** the word on the white canvas. Use the color palette and brush size buttons in the toolbar.
-4. Click **🔍 Guess!** — wait 1–3 seconds while the AI analyses your drawing and speaks its guess aloud.
-5. The guess appears in the panel on the right. Keep drawing and guessing.
-6. If you're stuck, click **💡 Hint** to reveal the word's category (costs +1 guess).
-7. When the AI guesses correctly, it celebrates with a voiced reaction and confetti.
-8. Click **🎮 Play Again** to start a new round.
+2. Click **🎮 Start Game** (or press **S**) — a secret word appears at the top left.
+3. **Start drawing** on the white canvas. Use the color palette and brush size buttons in the toolbar.
+4. **The AI watches automatically** — every 2–5 seconds, it analyzes your drawing and speaks a guess aloud.
+5. The guess appears in the panel on the right. Keep drawing to give the AI more clues.
+6. If you're stuck, click **💡 Hint** (or press **H**) to reveal the word's category (costs +1 guess).
+7. Want an immediate guess? Click **⚡ Guess Now** (or press **Space/Enter**).
+8. Use **Ctrl/Cmd+Z** to undo strokes, or press **C** to clear the canvas.
+9. When the AI guesses correctly, it celebrates with a voiced reaction and confetti.
+10. Click **🎮 Play Again** to start a new round.
+11. View your stats by clicking the **📊** icon in the header.
+12. Press **?** to see all keyboard shortcuts.
+
+### Keyboard Shortcuts
+
+- **Space / Enter** — Force AI to guess now (skip the wait)
+- **C** — Clear canvas
+- **H** — Use hint
+- **Ctrl/Cmd + Z** — Undo stroke
+- **S** — Start new game
+- **?** — Show shortcuts panel
+- **Esc** — Close panels
 
 ---
 
@@ -184,17 +201,24 @@ ai-charades/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── DrawingCanvas.tsx   # HTML5 canvas with brush tools
+│   │   │   ├── ErrorBoundary.tsx   # Crash recovery component
 │   │   │   ├── GuessPanel.tsx      # Scrollable AI guess history
-│   │   │   ├── Header.tsx          # Title + difficulty selector
+│   │   │   ├── Header.tsx          # Title + difficulty + stats/shortcuts buttons
 │   │   │   ├── ResultOverlay.tsx   # Win/lose modal with confetti
+│   │   │   ├── ShortcutsPanel.tsx  # Keyboard shortcuts help modal
+│   │   │   ├── StatsPanel.tsx      # Game statistics modal
 │   │   │   └── TimerBar.tsx        # Animated countdown bar
 │   │   ├── hooks/
+│   │   │   ├── useAudio.ts         # Fetch audio blob + Web Audio playback
 │   │   │   ├── useGameState.ts     # State machine + timer logic
-│   │   │   └── useAudio.ts         # Fetch audio blob + Web Audio playback
+│   │   │   ├── useGameStats.ts     # LocalStorage stats tracking
+│   │   │   ├── useKeyboardShortcuts.ts  # Global keyboard event handling
+│   │   │   └── useSoundEffects.ts  # Web Audio API sound effects
 │   │   ├── lib/
 │   │   │   └── fuzzyMatch.ts       # Guess correctness detection
-│   │   ├── App.tsx                 # Root component + game orchestration
-│   │   └── index.css               # Global dark theme styles
+│   │   ├── App.tsx                 # Root component + auto-guess orchestration
+│   │   ├── main.tsx                # React entry point with ErrorBoundary
+│   │   └── index.css               # Global dark theme styles + animations
 │   ├── index.html
 │   └── vite.config.ts              # Dev server + /api proxy config
 │
@@ -203,11 +227,11 @@ ai-charades/
 │       ├── routes/
 │       │   ├── guess.ts            # POST /api/guess — vision → TTS pipeline
 │       │   ├── celebrate.ts        # POST /api/celebrate — win/lose voice line
-│       │   └── word.ts             # GET /api/word — random word by difficulty
+│       │   └── word.ts             # GET /api/word — cached random word by difficulty
 │       ├── lib/
 │       │   ├── openai.ts           # GPT-4o Vision call + celebration lines
 │       │   └── elevenlabs.ts       # ElevenLabs TTS streaming
-│       └── index.ts                # Express app entry point
+│       └── index.ts                # Express app entry point + rate limiting
 │
 ├── .env.example              # Environment variable template
 ├── .env                      # Your local keys (gitignored)
@@ -234,12 +258,21 @@ ai-charades/
 ## Game Features
 
 - 🎨 **Drawing canvas** — brush sizes (S/M/L), 12 colors, undo last stroke, clear
-- 🤖 **AI voice guesser** — conversational, playful, expressive (Rachel voice)
-- ⏱️ **90-second timer** — colour shifts from teal → amber → red as time runs low
+- 🤖 **AI voice guesser** — conversational, playful, expressive (Rachel voice from ElevenLabs)
+- 🔄 **Auto-guessing** — AI watches in real-time and guesses every 2–5 seconds automatically
+- 🧠 **Adaptive timing** — AI waits longer when you stop drawing, giving you space to think
+- ⚡ **Manual guess** — Skip the wait with "Guess Now" button (Space/Enter)
+- ⏱️ **90-second timer** — color shifts from teal → amber → red as time runs low
 - 💡 **Hint system** — reveals the word's category (+1 guess penalty)
 - 📜 **Guess history** — scrollable log of every AI guess with correct-answer highlight
 - 🎉 **Celebration audio** — unique voiced win/lose reactions generated by GPT-4o
 - 🟢🟡🔴 **Three difficulty levels** — Easy (cat, house) through Hard (gravity, procrastination)
+- 📊 **Stats tracking** — win rate, streaks, best scores, average guesses (saved locally)
+- ⌨️ **Keyboard shortcuts** — Space/Enter to force guess, C to clear, H for hint, Ctrl/Cmd+Z to undo
+- 🔊 **Sound effects** — satisfying audio feedback for clicks, success, errors, drawing
+- 📱 **Mobile responsive** — works great on phones and tablets
+- ⚡ **Performance optimized** — rate limiting, caching, smooth animations
+- 🛡️ **Error boundary** — graceful crash handling with reload option
 
 ---
 

@@ -27,9 +27,9 @@ export default function GuessPanel({ guesses, isGuessing }: GuessPanelProps) {
         {guesses.length === 0 && !isGuessing && (
           <div style={styles.empty}>
             <span style={{ fontSize: "32px" }}>🎨</span>
-            <p>Draw something and hit <strong>Guess!</strong></p>
+            <p>Just start drawing — <strong>the AI will guess as you go</strong>.</p>
             <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              The AI will speak its guess aloud
+              Every couple of seconds it'll call out what it thinks you're drawing.
             </p>
           </div>
         )}

@@ -6,40 +6,50 @@ const router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const { image, guessHistory = [], hint } = req.body as {
-      image: string;
-      guessHistory: string[];
-      hint?: string;
+    const { image, guessHistory, hint, canvasChanged } = req.body as {
+      image?: unknown;
+      guessHistory?: unknown;
+      hint?: unknown;
+      canvasChanged?: unknown;
     };
 
-    if (!image) {
-      res.status(400).json({ error: "image is required" });
+    if (typeof image !== "string" || !image.startsWith("data:image/")) {
+      res.status(400).json({ error: "image must be a data URL string" });
       return;
     }
+    const history = Array.isArray(guessHistory)
+      ? guessHistory.filter((g): g is string => typeof g === "string").slice(-20)
+      : [];
+    const hintText = typeof hint === "string" && hint.length > 0 ? hint : undefined;
+    const changed = typeof canvasChanged === "boolean" ? canvasChanged : true;
 
-    // 1. Ask GPT-4o Vision to guess
-    const guessText = await generateGuess(image, guessHistory, hint);
+    const guessText = await generateGuess(image, history, hintText, changed);
 
-    // 2. Convert guess to speech via ElevenLabs
     const audioStream = await textToSpeechStream(guessText);
 
-    // 3. Stream audio back; expose guess text in header
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("X-Guess-Text", encodeURIComponent(guessText));
     res.setHeader("Access-Control-Expose-Headers", "X-Guess-Text");
 
-    audioStream.pipe(res);
+    req.on("close", () => {
+      audioStream.destroy();
+    });
 
     audioStream.on("error", (err) => {
       console.error("Audio stream error:", err);
       if (!res.headersSent) {
-        res.status(500).json({ error: "Audio stream failed" });
+        res.status(502).json({ error: "Audio stream failed" });
+      } else {
+        res.end();
       }
     });
-  } catch (err) {
-    console.error("Guess route error:", err);
+
+    audioStream.pipe(res);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Guess route error:", message);
     if (!res.headersSent) {
-      res.status(500).json({ error: "Internal server error" });
+      res.status(502).json({ error: "AI guess failed", detail: message });
     }
   }
 });

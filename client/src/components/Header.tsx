@@ -5,6 +5,8 @@ interface HeaderProps {
   difficulty: Difficulty;
   onDifficultyChange: (d: Difficulty) => void;
   disabled: boolean;
+  onShowStats: () => void;
+  onShowShortcuts: () => void;
 }
 
 const difficulties: { value: Difficulty; label: string; emoji: string }[] = [
@@ -13,7 +15,13 @@ const difficulties: { value: Difficulty; label: string; emoji: string }[] = [
   { value: "hard", label: "Hard", emoji: "🔴" },
 ];
 
-export default function Header({ difficulty, onDifficultyChange, disabled }: HeaderProps) {
+export default function Header({ 
+  difficulty, 
+  onDifficultyChange, 
+  disabled, 
+  onShowStats, 
+  onShowShortcuts 
+}: HeaderProps) {
   return (
     <header style={styles.header}>
       <div style={styles.title}>
@@ -21,23 +29,45 @@ export default function Header({ difficulty, onDifficultyChange, disabled }: Hea
         <span style={styles.titleText}>AI Charades</span>
         <span style={styles.subtitle}>Draw it. The AI guesses it.</span>
       </div>
-      <div style={styles.difficultyGroup}>
-        {difficulties.map((d) => (
+      
+      <div style={styles.controls}>
+        <div style={styles.difficultyGroup}>
+          {difficulties.map((d) => (
+            <button
+              key={d.value}
+              onClick={() => onDifficultyChange(d.value)}
+              disabled={disabled}
+              style={{
+                ...styles.diffBtn,
+                ...(difficulty === d.value ? styles.diffBtnActive : {}),
+                ...(disabled ? styles.diffBtnDisabled : {}),
+              }}
+              aria-pressed={difficulty === d.value}
+              aria-label={`Set difficulty to ${d.label}`}
+            >
+              {d.emoji} {d.label}
+            </button>
+          ))}
+        </div>
+        
+        <div style={styles.iconButtons}>
           <button
-            key={d.value}
-            onClick={() => onDifficultyChange(d.value)}
-            disabled={disabled}
-            style={{
-              ...styles.diffBtn,
-              ...(difficulty === d.value ? styles.diffBtnActive : {}),
-              ...(disabled ? styles.diffBtnDisabled : {}),
-            }}
-            aria-pressed={difficulty === d.value}
-            aria-label={`Set difficulty to ${d.label}`}
+            onClick={onShowStats}
+            style={styles.iconBtn}
+            aria-label="View stats"
+            title="View stats"
           >
-            {d.emoji} {d.label}
+            📊
           </button>
-        ))}
+          <button
+            onClick={onShowShortcuts}
+            style={styles.iconBtn}
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (?)"
+          >
+            ⌨️
+          </button>
+        </div>
       </div>
     </header>
   );
@@ -73,6 +103,11 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text-muted)",
     marginLeft: "4px",
   },
+  controls: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
   difficultyGroup: {
     display: "flex",
     gap: "8px",
@@ -95,5 +130,22 @@ const styles: Record<string, React.CSSProperties> = {
   diffBtnDisabled: {
     opacity: 0.5,
     cursor: "not-allowed",
+  },
+  iconButtons: {
+    display: "flex",
+    gap: "6px",
+  },
+  iconBtn: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    background: "var(--surface2)",
+    border: "1px solid var(--border)",
+    fontSize: "18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.15s",
   },
 };

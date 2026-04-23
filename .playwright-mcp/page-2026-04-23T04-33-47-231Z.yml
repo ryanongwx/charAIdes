@@ -1,0 +1,85 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 🎨
+      - generic [ref=e7]: AI Charades
+      - generic [ref=e8]: Draw it. The AI guesses it.
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - button "Set difficulty to Easy" [pressed] [ref=e11] [cursor=pointer]: 🟢 Easy
+        - button "Set difficulty to Medium" [ref=e12] [cursor=pointer]: 🟡 Medium
+        - button "Set difficulty to Hard" [ref=e13] [cursor=pointer]: 🔴 Hard
+      - generic [ref=e14]:
+        - button "View stats" [ref=e15] [cursor=pointer]: 📊
+        - button "Keyboard shortcuts" [ref=e16] [cursor=pointer]: ⌨️
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e137]:
+        - generic [ref=e138]:
+          - generic [ref=e139]: Body
+          - generic [ref=e140]: easy
+        - generic [ref=e141]:
+          - generic [ref=e142]: "Your word:"
+          - generic [ref=e143]: hand
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - group "Color palette" [ref=e21]:
+            - 'button "Select color #000000" [pressed] [ref=e22] [cursor=pointer]'
+            - 'button "Select color #ffffff" [ref=e23] [cursor=pointer]'
+            - 'button "Select color #e94560" [ref=e24] [cursor=pointer]'
+            - 'button "Select color #f5a623" [ref=e25] [cursor=pointer]'
+            - 'button "Select color #f7e017" [ref=e26] [cursor=pointer]'
+            - 'button "Select color #2ecc71" [ref=e27] [cursor=pointer]'
+            - 'button "Select color #4ecdc4" [ref=e28] [cursor=pointer]'
+            - 'button "Select color #3498db" [ref=e29] [cursor=pointer]'
+            - 'button "Select color #9b59b6" [ref=e30] [cursor=pointer]'
+            - 'button "Select color #e67e22" [ref=e31] [cursor=pointer]'
+            - 'button "Select color #795548" [ref=e32] [cursor=pointer]'
+            - 'button "Select color #607d8b" [ref=e33] [cursor=pointer]'
+          - group "Brush size" [ref=e35]:
+            - button "Brush size S" [ref=e36] [cursor=pointer]: S
+            - button "Brush size M" [pressed] [ref=e37] [cursor=pointer]: M
+            - button "Brush size L" [ref=e38] [cursor=pointer]: L
+          - button "Undo last stroke" [disabled] [ref=e40] [cursor=pointer]: ↩ Undo
+        - img "Drawing canvas" [ref=e42]
+      - generic [ref=e43]:
+        - button "Force AI to guess now" [disabled] [ref=e67] [cursor=pointer]: ⚡ Guess Now
+        - button "Use hint" [disabled] [ref=e68] [cursor=pointer]: 💡 Hint
+        - button "Undo last stroke" [disabled] [ref=e69] [cursor=pointer]: ↩ Undo
+        - button "Clear canvas" [disabled] [ref=e70] [cursor=pointer]: 🗑️ Clear
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]: 🤖
+        - generic [ref=e49]: AI Guesser
+        - generic [ref=e164]: 7 guesses
+      - log "Guess history" [ref=e50]:
+        - generic [ref=e165]:
+          - generic [ref=e166]: "#1"
+          - generic [ref=e167]: Could that be a tiny caterpillar?
+        - generic [ref=e168]:
+          - generic [ref=e169]: "#2"
+          - generic [ref=e170]: Looks like the outline of a donut!
+        - generic [ref=e171]:
+          - generic [ref=e172]: "#3"
+          - generic [ref=e173]: Honestly? No clue.
+        - generic [ref=e174]:
+          - generic [ref=e175]: "#4"
+          - generic [ref=e176]: Is it a fluffy cloud, maybe?
+        - generic [ref=e178]:
+          - generic [ref=e179]: "#5"
+          - generic [ref=e180]: Is it the outline of a flower petal?
+        - generic [ref=e182]:
+          - generic [ref=e183]: "#6"
+          - generic [ref=e184]: Could you add some color or texture? I'm lost right now!
+        - generic [ref=e185]:
+          - generic [ref=e186]: "#7"
+          - generic [ref=e187]: Maybe a sun with rays peeking out?
+  - dialog "Time's up!" [ref=e188]:
+    - generic [ref=e189]:
+      - generic [ref=e190]: ⏰
+      - heading "Time's Up!" [level=2] [ref=e191]
+      - generic [ref=e192]:
+        - generic [ref=e193]: The word was
+        - generic [ref=e194]: hand
+      - paragraph [ref=e195]: Better luck next time! Keep practicing your drawing skills 🖌️
+      - button "🎮 Play Again" [active] [ref=e196] [cursor=pointer]

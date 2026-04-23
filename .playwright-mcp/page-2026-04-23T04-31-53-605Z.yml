@@ -1,0 +1,71 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 🎨
+      - generic [ref=e7]: AI Charades
+      - generic [ref=e8]: Draw it. The AI guesses it.
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - button "Set difficulty to Easy" [pressed] [ref=e11] [cursor=pointer]: 🟢 Easy
+        - button "Set difficulty to Medium" [ref=e12] [cursor=pointer]: 🟡 Medium
+        - button "Set difficulty to Hard" [ref=e13] [cursor=pointer]: 🔴 Hard
+      - generic [ref=e14]:
+        - button "View stats" [ref=e15] [cursor=pointer]: 📊
+        - button "Keyboard shortcuts" [ref=e16] [cursor=pointer]: ⌨️
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]: Objects
+          - generic [ref=e59]: easy
+        - generic [ref=e60]:
+          - generic [ref=e61]: "Your word:"
+          - generic [ref=e62]: boat
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - group "Color palette" [ref=e21]:
+            - 'button "Select color #000000" [pressed] [ref=e22] [cursor=pointer]'
+            - 'button "Select color #ffffff" [ref=e23] [cursor=pointer]'
+            - 'button "Select color #e94560" [ref=e24] [cursor=pointer]'
+            - 'button "Select color #f5a623" [ref=e25] [cursor=pointer]'
+            - 'button "Select color #f7e017" [ref=e26] [cursor=pointer]'
+            - 'button "Select color #2ecc71" [ref=e27] [cursor=pointer]'
+            - 'button "Select color #4ecdc4" [ref=e28] [cursor=pointer]'
+            - 'button "Select color #3498db" [ref=e29] [cursor=pointer]'
+            - 'button "Select color #9b59b6" [ref=e30] [cursor=pointer]'
+            - 'button "Select color #e67e22" [ref=e31] [cursor=pointer]'
+            - 'button "Select color #795548" [ref=e32] [cursor=pointer]'
+            - 'button "Select color #607d8b" [ref=e33] [cursor=pointer]'
+          - group "Brush size" [ref=e35]:
+            - button "Brush size S" [ref=e36] [cursor=pointer]: S
+            - button "Brush size M" [pressed] [ref=e37] [cursor=pointer]: M
+            - button "Brush size L" [ref=e38] [cursor=pointer]: L
+          - button "Undo last stroke" [disabled] [ref=e40] [cursor=pointer]: ↩ Undo
+        - img "Drawing canvas" [ref=e42]
+      - generic [ref=e43]:
+        - button "Force AI to guess now" [disabled] [ref=e67] [cursor=pointer]: ⚡ Guess Now
+        - button "Use hint" [disabled] [ref=e68] [cursor=pointer]: 💡 Hint
+        - button "Undo last stroke" [disabled] [ref=e69] [cursor=pointer]: ↩ Undo
+        - button "Clear canvas" [disabled] [ref=e70] [cursor=pointer]: 🗑️ Clear
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]: 🤖
+        - generic [ref=e49]: AI Guesser
+        - generic [ref=e80]: 1 guesses
+      - log "Guess history" [ref=e50]:
+        - generic [ref=e81]:
+          - generic [ref=e82]: "#1"
+          - generic [ref=e83]: A boat on calm waters? Or maybe a big bowl?
+          - generic [ref=e84]: ✓ Correct!
+  - dialog "You won!" [ref=e85]:
+    - generic [ref=e126]:
+      - generic [ref=e127]: 🎉
+      - heading "Got it!" [level=2] [ref=e128]
+      - generic [ref=e129]:
+        - generic [ref=e130]: The word was
+        - generic [ref=e131]: boat
+      - generic [ref=e132]:
+        - generic [ref=e133]: Guessed in
+        - generic [ref=e134]: "1"
+        - generic [ref=e135]: guess
+      - button "🎮 Play Again" [active] [ref=e136] [cursor=pointer]

@@ -30,6 +30,15 @@ const wordBank: WordEntry[] = [
   { word: "heart", category: "Symbols", difficulty: "easy" },
   { word: "key", category: "Objects", difficulty: "easy" },
   { word: "ball", category: "Sports", difficulty: "easy" },
+  { word: "cloud", category: "Nature", difficulty: "easy" },
+  { word: "cup", category: "Objects", difficulty: "easy" },
+  { word: "shoe", category: "Objects", difficulty: "easy" },
+  { word: "eye", category: "Body", difficulty: "easy" },
+  { word: "hand", category: "Body", difficulty: "easy" },
+  { word: "pencil", category: "Objects", difficulty: "easy" },
+  { word: "snake", category: "Animals", difficulty: "easy" },
+  { word: "bee", category: "Animals", difficulty: "easy" },
+  { word: "cake", category: "Food", difficulty: "easy" },
 
   // Medium
   { word: "elephant", category: "Animals", difficulty: "medium" },
@@ -52,6 +61,15 @@ const wordBank: WordEntry[] = [
   { word: "campfire", category: "Nature", difficulty: "medium" },
   { word: "snowman", category: "Seasonal", difficulty: "medium" },
   { word: "treasure chest", category: "Objects", difficulty: "medium" },
+  { word: "castle", category: "Places", difficulty: "medium" },
+  { word: "dragon", category: "Mythology", difficulty: "medium" },
+  { word: "hamburger", category: "Food", difficulty: "medium" },
+  { word: "helicopter", category: "Vehicles", difficulty: "medium" },
+  { word: "pyramid", category: "Places", difficulty: "medium" },
+  { word: "robot", category: "Technology", difficulty: "medium" },
+  { word: "ice cream", category: "Food", difficulty: "medium" },
+  { word: "mushroom", category: "Nature", difficulty: "medium" },
+  { word: "octopus", category: "Animals", difficulty: "medium" },
 
   // Hard
   { word: "democracy", category: "Concepts", difficulty: "hard" },
@@ -76,12 +94,25 @@ const wordBank: WordEntry[] = [
   { word: "infinity", category: "Concepts", difficulty: "hard" },
 ];
 
+// Cache filtered word lists for performance
+const wordCache: Record<Difficulty, WordEntry[]> = {
+  easy: wordBank.filter((w) => w.difficulty === "easy"),
+  medium: wordBank.filter((w) => w.difficulty === "medium"),
+  hard: wordBank.filter((w) => w.difficulty === "hard"),
+};
+
 const router = Router();
 
+const isDifficulty = (v: unknown): v is Difficulty =>
+  v === "easy" || v === "medium" || v === "hard";
+
 router.get("/", (req: Request, res: Response) => {
-  const difficulty = (req.query.difficulty as Difficulty) || "medium";
-  const filtered = wordBank.filter((w) => w.difficulty === difficulty);
+  const raw = req.query.difficulty;
+  const difficulty: Difficulty = isDifficulty(raw) ? raw : "medium";
+  const filtered = wordCache[difficulty];
   const entry = filtered[Math.floor(Math.random() * filtered.length)];
+
+  res.setHeader("Cache-Control", "no-store");
   res.json(entry);
 });
 

@@ -35,19 +35,23 @@ export function useGameState() {
   }, []);
 
   const startTimer = useCallback(() => {
-    clearTimer();
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
     setTimeLeft(TIMER_SECONDS);
     timerRef.current = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
-          clearTimer();
           setPhase("LOST");
           return 0;
         }
         return t - 1;
       });
     }, 1000);
-  }, [clearTimer]);
+  }, []);
 
   useEffect(() => {
     return () => clearTimer();
@@ -59,18 +63,20 @@ export function useGameState() {
       setDifficulty(diff);
       setGuesses([]);
       setHintUsed(false);
-      setPhase("DRAWING");
+      setWordEntry(null);
+      clearTimer();
 
-      try {
-        const res = await fetch(`/api/word?difficulty=${diff}`);
-        const data: WordEntry = await res.json();
-        setWordEntry(data);
-        startTimer();
-      } catch (err) {
-        console.error("Failed to fetch word:", err);
+      const res = await fetch(`/api/word?difficulty=${diff}`);
+      if (!res.ok) {
+        setPhase("IDLE");
+        throw new Error(`Failed to fetch word (${res.status})`);
       }
+      const data: WordEntry = await res.json();
+      setWordEntry(data);
+      setPhase("DRAWING");
+      startTimer();
     },
-    [difficulty, startTimer]
+    [difficulty, startTimer, clearTimer]
   );
 
   const addGuess = useCallback(

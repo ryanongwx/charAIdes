@@ -3,10 +3,16 @@ import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperat
 export interface DrawingCanvasHandle {
   getImageDataUrl: () => string;
   clear: () => void;
+  undo: () => void;
+  isEmpty: () => boolean;
 }
 
 interface DrawingCanvasProps {
   disabled?: boolean;
+  thinking?: boolean;
+  onStrokeStart?: () => void;
+  onStrokeEnd?: () => void;
+  onHistoryChange?: (canUndo: boolean, isEmpty: boolean) => void;
 }
 
 const COLORS = [
@@ -22,13 +28,26 @@ const BRUSH_SIZES = [
 ];
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
-  ({ disabled = false }, ref) => {
+  ({ disabled = false, thinking = false, onStrokeStart, onStrokeEnd, onHistoryChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [color, setColor] = useState("#000000");
     const [brushSize, setBrushSize] = useState(10);
     const [history, setHistory] = useState<ImageData[]>([]);
+    const [hasDrawn, setHasDrawn] = useState(false);
     const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+    useEffect(() => {
+      onHistoryChange?.(history.length > 0, !hasDrawn);
+    }, [history.length, hasDrawn, onHistoryChange]);
+
+    const fillWhite = useCallback(() => {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) return;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }, []);
 
     useImperativeHandle(ref, () => ({
       getImageDataUrl: () => {
@@ -37,23 +56,29 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         return canvas.toDataURL("image/png");
       },
       clear: () => {
+        fillWhite();
+        setHistory([]);
+        setHasDrawn(false);
+      },
+      undo: () => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext("2d");
         if (!canvas || !ctx) return;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        setHistory([]);
+        setHistory((h) => {
+          if (h.length === 0) return h;
+          const prev = h[h.length - 1];
+          ctx.putImageData(prev, 0, 0);
+          const next = h.slice(0, -1);
+          if (next.length === 0) setHasDrawn(false);
+          return next;
+        });
       },
+      isEmpty: () => !hasDrawn,
     }));
 
-    // Initialize canvas with white background
     useEffect(() => {
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext("2d");
-      if (!canvas || !ctx) return;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }, []);
+      fillWhite();
+    }, [fillWhite]);
 
     const getPos = useCallback(
       (e: React.MouseEvent | React.TouchEvent): { x: number; y: number } | null => {
@@ -65,6 +90,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
         if ("touches" in e) {
           const touch = e.touches[0];
+          if (!touch) return null;
           return {
             x: (touch.clientX - rect.left) * scaleX,
             y: (touch.clientY - rect.top) * scaleY,
@@ -83,7 +109,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
       const ctx = canvas?.getContext("2d");
       if (!canvas || !ctx) return;
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      setHistory((prev) => [...prev.slice(-19), imageData]); // keep last 20
+      setHistory((prev) => [...prev.slice(-19), imageData]);
     }, []);
 
     const startDraw = useCallback(
@@ -91,12 +117,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         if (disabled) return;
         e.preventDefault();
         saveHistory();
+        onStrokeStart?.();
         const pos = getPos(e);
         if (!pos) return;
         lastPos.current = pos;
         setIsDrawing(true);
+        setHasDrawn(true);
 
-        // Draw a dot on click
         const ctx = canvasRef.current?.getContext("2d");
         if (ctx) {
           ctx.beginPath();
@@ -105,7 +132,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           ctx.fill();
         }
       },
-      [disabled, getPos, saveHistory, brushSize, color]
+      [disabled, getPos, saveHistory, brushSize, color, onStrokeStart]
     );
 
     const draw = useCallback(
@@ -133,24 +160,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
     );
 
     const stopDraw = useCallback(() => {
+      if (isDrawing) {
+        onStrokeEnd?.();
+      }
       setIsDrawing(false);
       lastPos.current = null;
-    }, []);
+    }, [isDrawing, onStrokeEnd]);
 
-    const undo = useCallback(() => {
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext("2d");
-      if (!canvas || !ctx || history.length === 0) return;
-      const prev = history[history.length - 1];
-      ctx.putImageData(prev, 0, 0);
-      setHistory((h) => h.slice(0, -1));
-    }, [history]);
+    const canUndo = history.length > 0;
 
     return (
       <div style={styles.wrapper}>
-        {/* Toolbar */}
         <div style={styles.toolbar}>
-          {/* Colors */}
           <div style={styles.colorGrid} role="group" aria-label="Color palette">
             {COLORS.map((c) => (
               <button
@@ -170,7 +191,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
           <div style={styles.divider} />
 
-          {/* Brush sizes */}
           <div style={styles.brushGroup} role="group" aria-label="Brush size">
             {BRUSH_SIZES.map((b) => (
               <button
@@ -191,11 +211,21 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
           <div style={styles.divider} />
 
-          {/* Actions */}
           <button
-            onClick={undo}
-            disabled={history.length === 0 || disabled}
-            style={styles.actionBtn}
+            onClick={() => {
+              const canvas = canvasRef.current;
+              const ctx = canvas?.getContext("2d");
+              if (!canvas || !ctx || history.length === 0) return;
+              const prev = history[history.length - 1];
+              ctx.putImageData(prev, 0, 0);
+              setHistory((h) => {
+                const next = h.slice(0, -1);
+                if (next.length === 0) setHasDrawn(false);
+                return next;
+              });
+            }}
+            disabled={!canUndo || disabled}
+            style={{ ...styles.actionBtn, opacity: !canUndo || disabled ? 0.5 : 1 }}
             aria-label="Undo last stroke"
             title="Undo"
           >
@@ -203,7 +233,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           </button>
         </div>
 
-        {/* Canvas */}
         <div style={{ position: "relative" }}>
           <canvas
             ref={canvasRef}
@@ -213,6 +242,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
               ...styles.canvas,
               cursor: disabled ? "not-allowed" : "crosshair",
               opacity: disabled ? 0.7 : 1,
+              maxHeight: "420px",
             }}
             onMouseDown={startDraw}
             onMouseMove={draw}
@@ -224,9 +254,10 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             aria-label="Drawing canvas"
             role="img"
           />
-          {disabled && (
-            <div style={styles.disabledOverlay}>
-              <span>🤔 AI is thinking...</span>
+          {thinking && (
+            <div style={styles.thinkingBadge} aria-live="polite">
+              <span style={styles.thinkingDot} />
+              <span>AI is guessing…</span>
             </div>
           )}
         </div>
@@ -301,6 +332,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#ffffff",
     width: "100%",
     maxWidth: "600px",
+    height: "auto",
     touchAction: "none",
     boxShadow: "var(--shadow)",
   },
@@ -316,5 +348,29 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     fontWeight: 600,
     backdropFilter: "blur(2px)",
+  },
+  thinkingBadge: {
+    position: "absolute",
+    top: "10px",
+    right: "10px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "rgba(15,15,26,0.78)",
+    color: "#fff",
+    padding: "6px 12px",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: 600,
+    pointerEvents: "none",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+    backdropFilter: "blur(6px)",
+  },
+  thinkingDot: {
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    background: "var(--accent3)",
+    animation: "pulse 1s ease-in-out infinite",
   },
 };

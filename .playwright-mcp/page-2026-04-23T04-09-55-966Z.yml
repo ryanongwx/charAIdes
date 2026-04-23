@@ -1,0 +1,51 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 🎨
+      - generic [ref=e7]: AI Charades
+      - generic [ref=e8]: Draw it. The AI guesses it.
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - button "Set difficulty to Easy" [ref=e11] [cursor=pointer]: 🟢 Easy
+        - button "Set difficulty to Medium" [pressed] [ref=e12] [cursor=pointer]: 🟡 Medium
+        - button "Set difficulty to Hard" [ref=e13] [cursor=pointer]: 🔴 Hard
+      - generic [ref=e14]:
+        - button "View stats" [ref=e15] [cursor=pointer]: 📊
+        - button "Keyboard shortcuts" [ref=e16] [cursor=pointer]: ⌨️
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - group "Color palette" [ref=e21]:
+            - 'button "Select color #000000" [pressed] [ref=e22] [cursor=pointer]'
+            - 'button "Select color #ffffff" [ref=e23] [cursor=pointer]'
+            - 'button "Select color #e94560" [ref=e24] [cursor=pointer]'
+            - 'button "Select color #f5a623" [ref=e25] [cursor=pointer]'
+            - 'button "Select color #f7e017" [ref=e26] [cursor=pointer]'
+            - 'button "Select color #2ecc71" [ref=e27] [cursor=pointer]'
+            - 'button "Select color #4ecdc4" [ref=e28] [cursor=pointer]'
+            - 'button "Select color #3498db" [ref=e29] [cursor=pointer]'
+            - 'button "Select color #9b59b6" [ref=e30] [cursor=pointer]'
+            - 'button "Select color #e67e22" [ref=e31] [cursor=pointer]'
+            - 'button "Select color #795548" [ref=e32] [cursor=pointer]'
+            - 'button "Select color #607d8b" [ref=e33] [cursor=pointer]'
+          - group "Brush size" [ref=e35]:
+            - button "Brush size S" [ref=e36] [cursor=pointer]: S
+            - button "Brush size M" [pressed] [ref=e37] [cursor=pointer]: M
+            - button "Brush size L" [ref=e38] [cursor=pointer]: L
+          - button "Undo last stroke" [disabled] [ref=e40] [cursor=pointer]: ↩ Undo
+        - generic [ref=e41]:
+          - img "Drawing canvas" [ref=e42]
+          - generic [ref=e44]: 🤔 AI is thinking...
+      - button "🎮 Start Game" [ref=e46] [cursor=pointer]
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e50]: 🤖
+        - generic [ref=e51]: AI Guesser
+      - log "Guess history" [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]: 🎨
+          - paragraph [ref=e55]:
+            - text: Draw something and hit
+            - strong [ref=e56]: Guess!
+          - paragraph [ref=e57]: The AI will speak its guess aloud

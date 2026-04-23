@@ -1,17 +1,39 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import Header from "./components/Header";
 import DrawingCanvas, { DrawingCanvasHandle } from "./components/DrawingCanvas";
 import GuessPanel from "./components/GuessPanel";
 import TimerBar from "./components/TimerBar";
 import ResultOverlay from "./components/ResultOverlay";
+import StatsPanel from "./components/StatsPanel";
+import ShortcutsPanel from "./components/ShortcutsPanel";
 import { useGameState } from "./hooks/useGameState";
 import { useAudio } from "./hooks/useAudio";
+import { useGameStats } from "./hooks/useGameStats";
+import { useSoundEffects } from "./hooks/useSoundEffects";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import type { Difficulty } from "./hooks/useGameState";
+
+const AUTO_GUESS_MIN_MS = 2000;
+const AUTO_GUESS_MAX_MS = 5000;
+// When the canvas hasn't changed since the last guess, give the player a beat
+// longer between blurts — feels less like the AI is shouting over them.
+const UNCHANGED_EXTRA_PER_TICK_MS = 800;
+const UNCHANGED_MAX_EXTRA_MS = 3000;
 
 export default function App() {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
-  const { fetchAndPlay } = useAudio();
+  const { fetchAndPlay, stop: stopAudio } = useAudio();
+  const { stats, recordGame, resetStats } = useGameStats();
+  const { playClick, playSuccess, playError, playDraw } = useSoundEffects();
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingWord, setIsLoadingWord] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canvasEmpty, setCanvasEmpty] = useState(true);
+  const gameRecordedRef = useRef(false);
+  const lastGuessedSigRef = useRef<string | null>(null);
+  const unchangedTicksRef = useRef(0);
 
   const {
     phase,
@@ -33,81 +55,234 @@ export default function App() {
   const isGuessing = phase === "GUESSING";
   const isOver = phase === "WON" || phase === "LOST";
 
-  const handleGuess = useCallback(async () => {
-    if (!canvasRef.current || phase !== "DRAWING") return;
+  const handleCanvasHistory = useCallback((undo: boolean, empty: boolean) => {
+    setCanUndo(undo);
+    setCanvasEmpty(empty);
+  }, []);
+
+  const performGuess = useCallback(async (opts?: { canvasChanged?: boolean }): Promise<void> => {
+    const canvas = canvasRef.current;
+    if (!canvas || canvas.isEmpty()) return;
+
     setError(null);
     setGuessing(true);
 
     try {
-      const image = canvasRef.current.getImageDataUrl();
+      const image = canvas.getImageDataUrl();
       const guessHistory = guesses
         .filter((g) => !g.text.startsWith("💡"))
         .map((g) => g.text);
-      const hint = hintUsed ? `Category: ${wordEntry?.category}` : undefined;
+      const hint = hintUsed && wordEntry ? `Category: ${wordEntry.category}` : undefined;
+      const canvasChanged = opts?.canvasChanged ?? true;
 
       const { guessText } = await fetchAndPlay("/api/guess", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image, guessHistory, hint }),
+        body: JSON.stringify({ image, guessHistory, hint, canvasChanged }),
       });
 
       if (guessText) {
         const correct = addGuess(guessText);
 
         if (correct) {
-          // Play celebration audio
-          await fetchAndPlay("/api/celebrate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              won: true,
-              word: wordEntry?.word ?? "",
-              guessCount: guessCount + 1,
-            }),
-          });
+          playSuccess();
+          gameRecordedRef.current = true;
+          recordGame(true, guessCount + 1);
+          try {
+            await fetchAndPlay("/api/celebrate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                won: true,
+                word: wordEntry?.word ?? "",
+                guessCount: guessCount + 1,
+              }),
+            });
+          } catch (celebrateErr) {
+            console.warn("Celebrate audio failed:", celebrateErr);
+          }
         }
       }
     } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       console.error("Guess failed:", err);
-      setError("Couldn't reach the AI. Check your API keys and server.");
+      setError("Couldn't reach the AI. Check your server and API keys.");
+      playError();
     } finally {
       setGuessing(false);
     }
-  }, [phase, guesses, hintUsed, wordEntry, fetchAndPlay, addGuess, setGuessing, guessCount]);
+  }, [
+    guesses,
+    hintUsed,
+    wordEntry,
+    fetchAndPlay,
+    addGuess,
+    setGuessing,
+    guessCount,
+    playSuccess,
+    playError,
+    recordGame,
+  ]);
 
-  const handleLostCelebration = useCallback(async () => {
-    if (!wordEntry) return;
-    try {
-      await fetchAndPlay("/api/celebrate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ won: false, word: wordEntry.word, guessCount }),
-      });
-    } catch {
-      // non-critical
-    }
-  }, [wordEntry, guessCount, fetchAndPlay]);
+  // Auto-guess loop: while in DRAWING phase, every 2-5s, fire a guess if the
+  // canvas has new content. Skips when canvas is empty or unchanged.
+  useEffect(() => {
+    if (phase !== "DRAWING") return;
 
-  // Trigger lost audio when phase becomes LOST
-  const prevPhaseRef = useRef(phase);
-  if (prevPhaseRef.current !== phase) {
-    prevPhaseRef.current = phase;
-    if (phase === "LOST") {
-      handleLostCelebration();
-    }
-  }
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
 
-  const handlePlayAgain = useCallback(() => {
-    canvasRef.current?.clear();
-    startRound(difficulty);
-  }, [startRound, difficulty]);
+    const schedule = () => {
+      if (cancelled) return;
+      const base = AUTO_GUESS_MIN_MS + Math.random() * (AUTO_GUESS_MAX_MS - AUTO_GUESS_MIN_MS);
+      const stuckBonus = Math.min(
+        unchangedTicksRef.current * UNCHANGED_EXTRA_PER_TICK_MS,
+        UNCHANGED_MAX_EXTRA_MS
+      );
+      timerId = setTimeout(tick, base + stuckBonus);
+    };
+
+    const tick = () => {
+      if (cancelled) return;
+      const c = canvasRef.current;
+      if (!c || c.isEmpty()) {
+        // Nothing to react to — reset the stuck counter and try again later.
+        unchangedTicksRef.current = 0;
+        schedule();
+        return;
+      }
+      const sig = c.getImageDataUrl();
+      const changed = sig !== lastGuessedSigRef.current;
+      unchangedTicksRef.current = changed ? 0 : unchangedTicksRef.current + 1;
+      lastGuessedSigRef.current = sig;
+      // Fire the guess either way — let the AI reconsider, ask for more,
+      // or express confusion when the drawing is static.
+      void performGuess({ canvasChanged: changed });
+    };
+
+    schedule();
+
+    return () => {
+      cancelled = true;
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [phase, performGuess]);
+
+  useEffect(() => {
+    if (phase !== "LOST" || !wordEntry) return;
+    if (gameRecordedRef.current) return;
+    gameRecordedRef.current = true;
+
+    recordGame(false, guessCount);
+
+    let cancelled = false;
+    (async () => {
+      try {
+        if (cancelled) return;
+        await fetchAndPlay("/api/celebrate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ won: false, word: wordEntry.word, guessCount }),
+        });
+      } catch {
+        // non-critical
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, wordEntry, guessCount, fetchAndPlay, recordGame]);
+
+  const beginRound = useCallback(
+    (d?: Difficulty) => {
+      stopAudio();
+      canvasRef.current?.clear();
+      setIsLoadingWord(true);
+      setError(null);
+      gameRecordedRef.current = false;
+      lastGuessedSigRef.current = null;
+      unchangedTicksRef.current = 0;
+      playClick();
+      startRound(d)
+        .catch(() => {
+          setError("Failed to start game. Check your connection and server.");
+          playError();
+        })
+        .finally(() => setIsLoadingWord(false));
+    },
+    [startRound, playClick, playError, stopAudio]
+  );
+
+  const handlePlayAgain = useCallback(() => beginRound(difficulty), [beginRound, difficulty]);
+  const handleStartGame = useCallback(() => beginRound(), [beginRound]);
 
   const handleDifficultyChange = useCallback(
     (d: Difficulty) => {
       setDifficulty(d);
+      playClick();
     },
-    [setDifficulty]
+    [setDifficulty, playClick]
   );
+
+  const handleUndo = useCallback(() => {
+    if (canUndo) {
+      canvasRef.current?.undo();
+      playClick();
+    }
+  }, [canUndo, playClick]);
+
+  const handleClear = useCallback(() => {
+    canvasRef.current?.clear();
+    lastGuessedSigRef.current = null;
+    playClick();
+  }, [playClick]);
+
+  const handleHint = useCallback(() => {
+    useHint();
+    playClick();
+  }, [useHint, playClick]);
+
+  const handleGuessNow = useCallback(() => {
+    if (!canvasRef.current || canvasRef.current.isEmpty()) {
+      setError("Draw something first!");
+      playError();
+      return;
+    }
+    if (isGuessing) return;
+    playClick();
+    const sig = canvasRef.current.getImageDataUrl();
+    const changed = sig !== lastGuessedSigRef.current;
+    unchangedTicksRef.current = changed ? 0 : unchangedTicksRef.current + 1;
+    lastGuessedSigRef.current = sig;
+    void performGuess({ canvasChanged: changed });
+  }, [isGuessing, performGuess, playClick, playError]);
+
+  useKeyboardShortcuts(
+    {
+      onGuess: isDrawing && !canvasEmpty && !isGuessing ? handleGuessNow : undefined,
+      onClear: (isDrawing || isGuessing) && !canvasEmpty ? handleClear : undefined,
+      onHint: !hintUsed && (isDrawing || isGuessing) ? handleHint : undefined,
+      onUndo: (isDrawing || isGuessing) && canUndo ? handleUndo : undefined,
+      onStart: isIdle || isOver ? handleStartGame : undefined,
+    },
+    true
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "?" && !showStats) {
+        e.preventDefault();
+        setShowShortcuts((prev) => !prev);
+      } else if (e.key === "Escape") {
+        if (showShortcuts) setShowShortcuts(false);
+        if (showStats) setShowStats(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showStats, showShortcuts]);
+
+  const canDraw = isDrawing || isGuessing;
 
   return (
     <div style={styles.app}>
@@ -115,12 +290,12 @@ export default function App() {
         difficulty={difficulty}
         onDifficultyChange={handleDifficultyChange}
         disabled={!isIdle && !isOver}
+        onShowStats={() => setShowStats(true)}
+        onShowShortcuts={() => setShowShortcuts(true)}
       />
 
       <main style={styles.main}>
-        {/* Left: Drawing area */}
         <div style={styles.leftCol}>
-          {/* Word display */}
           {wordEntry && !isIdle && (
             <div style={styles.wordCard}>
               <div style={styles.wordMeta}>
@@ -134,62 +309,86 @@ export default function App() {
             </div>
           )}
 
-          {/* Timer */}
-          {isDrawing || isGuessing ? (
-            <TimerBar timeLeft={timeLeft} />
-          ) : null}
+          {canDraw && <TimerBar timeLeft={timeLeft} />}
 
-          {/* Canvas */}
           <DrawingCanvas
             ref={canvasRef}
-            disabled={isGuessing || isIdle || isOver}
+            disabled={!canDraw}
+            thinking={isGuessing}
+            onStrokeStart={playDraw}
+            onHistoryChange={handleCanvasHistory}
           />
 
-          {/* Controls */}
           <div style={styles.controls}>
             {isIdle ? (
               <button
-                onClick={() => startRound()}
-                style={{ ...styles.btn, ...styles.btnPrimary, fontSize: "18px", padding: "16px 40px" }}
+                onClick={handleStartGame}
+                disabled={isLoadingWord}
+                style={{
+                  ...styles.btn,
+                  ...styles.btnPrimary,
+                  fontSize: "18px",
+                  padding: "16px 40px",
+                  ...(isLoadingWord ? styles.btnDisabled : {}),
+                }}
+                title="Start game (S)"
               >
-                🎮 Start Game
+                {isLoadingWord ? "⏳ Loading..." : "🎮 Start Game"}
               </button>
             ) : (
               <>
                 <button
-                  onClick={handleGuess}
-                  disabled={isGuessing || isOver}
+                  onClick={handleGuessNow}
+                  disabled={isGuessing || isOver || canvasEmpty}
                   style={{
                     ...styles.btn,
-                    ...styles.btnPrimary,
-                    ...(isGuessing ? styles.btnDisabled : {}),
+                    ...styles.btnSecondary,
+                    ...(isGuessing || canvasEmpty ? styles.btnDisabled : {}),
                   }}
-                  aria-label="Ask AI to guess"
+                  aria-label="Force AI to guess now"
+                  title={canvasEmpty ? "Draw something first" : "Skip the wait — Space or Enter"}
                 >
-                  {isGuessing ? "🤔 Thinking..." : "🔍 Guess!"}
+                  ⚡ Guess Now
                 </button>
 
                 <button
-                  onClick={() => {
-                    useHint();
-                  }}
-                  disabled={hintUsed || isGuessing || isOver}
+                  onClick={handleHint}
+                  disabled={hintUsed || isOver}
                   style={{
                     ...styles.btn,
                     ...styles.btnSecondary,
                     ...(hintUsed ? styles.btnDisabled : {}),
                   }}
                   aria-label="Use hint"
-                  title={hintUsed ? "Hint already used" : "Get a category hint (+1 guess penalty)"}
+                  title={hintUsed ? "Hint already used" : "Get a category hint (H)"}
                 >
                   💡 {hintUsed ? "Hint Used" : "Hint"}
                 </button>
 
                 <button
-                  onClick={() => canvasRef.current?.clear()}
-                  disabled={isGuessing || isOver}
-                  style={{ ...styles.btn, ...styles.btnGhost }}
+                  onClick={handleUndo}
+                  disabled={!canUndo || isOver}
+                  style={{
+                    ...styles.btn,
+                    ...styles.btnGhost,
+                    ...(!canUndo ? styles.btnDisabled : {}),
+                  }}
+                  aria-label="Undo last stroke"
+                  title="Undo (Ctrl/Cmd+Z)"
+                >
+                  ↩ Undo
+                </button>
+
+                <button
+                  onClick={handleClear}
+                  disabled={isOver || canvasEmpty}
+                  style={{
+                    ...styles.btn,
+                    ...styles.btnGhost,
+                    ...(canvasEmpty ? styles.btnDisabled : {}),
+                  }}
                   aria-label="Clear canvas"
+                  title="Clear canvas (C)"
                 >
                   🗑️ Clear
                 </button>
@@ -204,19 +403,32 @@ export default function App() {
           )}
         </div>
 
-        {/* Right: Guess panel */}
         <div style={styles.rightCol}>
           <GuessPanel guesses={guesses} isGuessing={isGuessing} />
         </div>
       </main>
 
-      {/* Result overlay */}
       <ResultOverlay
         phase={phase}
         word={wordEntry?.word ?? ""}
         guessCount={guessCount}
         onPlayAgain={handlePlayAgain}
       />
+
+      {showStats && (
+        <StatsPanel
+          stats={stats}
+          onClose={() => setShowStats(false)}
+          onReset={() => {
+            if (confirm("Are you sure you want to reset all stats?")) {
+              resetStats();
+              playClick();
+            }
+          }}
+        />
+      )}
+
+      {showShortcuts && <ShortcutsPanel onClose={() => setShowShortcuts(false)} />}
     </div>
   );
 }
@@ -259,10 +471,12 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: "12px",
+    animation: "slideUp 0.3s ease",
   },
   wordMeta: {
     display: "flex",
     gap: "6px",
+    flexWrap: "wrap",
   },
   categoryBadge: {
     background: "var(--surface2)",
@@ -285,6 +499,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
+    flexWrap: "wrap",
   },
   wordLabel: {
     fontSize: "13px",
@@ -336,5 +551,6 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 14px",
     fontSize: "13px",
     color: "var(--accent)",
+    animation: "shake 0.5s ease",
   },
 };
