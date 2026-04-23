@@ -439,47 +439,71 @@ export default function App() {
 
       <main style={styles.main} className="game-main">
         <div style={styles.leftCol} className="game-left-col">
-          {wordEntry && !isIdle && (
-            <div style={styles.wordCard}>
-              <div style={styles.wordMeta}>
-                <span style={styles.categoryBadge}>{wordEntry.category}</span>
-                <span style={styles.diffBadge}>{wordEntry.difficulty}</span>
+          {isIdle ? (
+            <div style={styles.heroCard} className="hero-card">
+              <div style={styles.heroEmoji} aria-hidden="true">🎨</div>
+              <h1 style={styles.heroTitle} className="hero-title">
+                Ready to draw?
+              </h1>
+              <p style={styles.heroDesc} className="hero-desc">
+                You'll get a secret word. Sketch it, and the AI will guess out loud as you go.
+                Can you make it click before the timer runs out?
+              </p>
+
+              <div style={styles.heroMeta}>
+                <span style={styles.heroMetaLabel}>Difficulty</span>
+                <span style={styles.heroDiffPill}>
+                  {difficulty === "easy" ? "🟢" : difficulty === "medium" ? "🟡" : "🔴"}{" "}
+                  {difficulty[0].toUpperCase() + difficulty.slice(1)}
+                </span>
               </div>
-              <div style={styles.secretWord}>
-                <span style={styles.wordLabel}>Your word:</span>
-                <span style={styles.wordValue}>{wordEntry.word}</span>
-              </div>
-            </div>
-          )}
 
-          {canDraw && <TimerBar timeLeft={timeLeft} />}
-
-          <DrawingCanvas
-            ref={canvasRef}
-            disabled={!canDraw}
-            thinking={isGuessing}
-            onStrokeStart={playDraw}
-            onHistoryChange={handleCanvasHistory}
-          />
-
-          <div style={styles.controls} className="game-controls">
-            {isIdle ? (
               <button
                 onClick={handleStartGame}
                 disabled={isLoading}
                 style={{
                   ...styles.btn,
                   ...styles.btnPrimary,
-                  fontSize: "18px",
-                  padding: "16px 40px",
+                  ...styles.heroStartBtn,
                   ...(isLoading ? styles.btnDisabled : {}),
                 }}
+                className="hero-start-btn"
                 title="Start game (S)"
               >
                 {isLoading ? "⏳ Loading..." : "🎮 Start Game"}
               </button>
-            ) : (
-              <>
+
+              <p style={styles.heroHint}>
+                Tip: press <kbd style={styles.kbd}>S</kbd> to start,{" "}
+                <kbd style={styles.kbd}>?</kbd> for shortcuts
+              </p>
+            </div>
+          ) : (
+            <>
+              {wordEntry && (
+                <div style={styles.wordCard}>
+                  <div style={styles.wordMeta}>
+                    <span style={styles.categoryBadge}>{wordEntry.category}</span>
+                    <span style={styles.diffBadge}>{wordEntry.difficulty}</span>
+                  </div>
+                  <div style={styles.secretWord}>
+                    <span style={styles.wordLabel}>Your word:</span>
+                    <span style={styles.wordValue}>{wordEntry.word}</span>
+                  </div>
+                </div>
+              )}
+
+              {canDraw && <TimerBar timeLeft={timeLeft} />}
+
+              <DrawingCanvas
+                ref={canvasRef}
+                disabled={!canDraw}
+                thinking={isGuessing}
+                onStrokeStart={playDraw}
+                onHistoryChange={handleCanvasHistory}
+              />
+
+              <div style={styles.controls} className="game-controls">
                 <button
                   onClick={handleGuessNow}
                   disabled={isGuessing || isOver || canvasEmpty}
@@ -521,9 +545,9 @@ export default function App() {
                 >
                   🗑️ Clear
                 </button>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div style={styles.rightCol} className="game-right-col">
@@ -567,14 +591,14 @@ const styles: Record<string, React.CSSProperties> = {
   main: {
     display: "flex",
     flex: 1,
-    gap: "20px",
-    padding: "20px 24px",
+    gap: "24px",
+    padding: "24px",
     overflow: "hidden",
   },
   leftCol: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "14px",
     flex: "1 1 600px",
     minWidth: 0,
     overflowY: "auto",
@@ -582,20 +606,106 @@ const styles: Record<string, React.CSSProperties> = {
   rightCol: {
     display: "flex",
     flexDirection: "column",
-    flex: "0 0 280px",
-    minWidth: "240px",
+    flex: "0 0 300px",
+    minWidth: "260px",
     overflowY: "auto",
+  },
+  heroCard: {
+    background:
+      "linear-gradient(180deg, rgba(30,30,60,0.6) 0%, rgba(23,23,48,0.8) 100%)",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius-lg)",
+    padding: "56px 40px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "16px",
+    textAlign: "center",
+    flex: 1,
+    minHeight: "360px",
+    boxShadow: "var(--shadow)",
+    animation: "fadeIn 0.35s ease",
+    position: "relative",
+    overflow: "hidden",
+  },
+  heroEmoji: {
+    fontSize: "64px",
+    lineHeight: 1,
+    animation: "floatY 3s ease-in-out infinite",
+    filter: "drop-shadow(0 8px 20px rgba(255, 77, 109, 0.35))",
+  },
+  heroTitle: {
+    fontFamily: "'Fredoka One', cursive",
+    fontSize: "36px",
+    margin: 0,
+    background: "linear-gradient(135deg, #ff4d6d 0%, #ffb648 50%, #4ecdc4 100%)",
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+    letterSpacing: "0.5px",
+  },
+  heroDesc: {
+    maxWidth: "460px",
+    color: "var(--text-muted)",
+    fontSize: "15px",
+    lineHeight: 1.6,
+  },
+  heroMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginTop: "4px",
+  },
+  heroMetaLabel: {
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "1.5px",
+    color: "var(--text-dim)",
+  },
+  heroDiffPill: {
+    padding: "6px 14px",
+    borderRadius: "999px",
+    background: "var(--surface2)",
+    border: "1px solid var(--border-strong)",
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "var(--text)",
+  },
+  heroStartBtn: {
+    marginTop: "12px",
+    fontSize: "18px",
+    padding: "16px 44px",
+    animation: "pulseGlow 2.4s ease-in-out infinite",
+  },
+  heroHint: {
+    marginTop: "4px",
+    fontSize: "13px",
+    color: "var(--text-dim)",
+  },
+  kbd: {
+    display: "inline-block",
+    padding: "2px 7px",
+    background: "var(--surface2)",
+    border: "1px solid var(--border-strong)",
+    borderRadius: "6px",
+    fontFamily: "ui-monospace, 'SF Mono', monospace",
+    fontSize: "11px",
+    color: "var(--text)",
+    boxShadow: "inset 0 -1px 0 var(--border)",
   },
   wordCard: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: "var(--radius)",
-    padding: "12px 16px",
+    padding: "14px 18px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "12px",
     animation: "slideUp 0.3s ease",
+    boxShadow: "var(--shadow-sm)",
+    flexWrap: "wrap",
   },
   wordMeta: {
     display: "flex",
@@ -605,19 +715,21 @@ const styles: Record<string, React.CSSProperties> = {
   categoryBadge: {
     background: "var(--surface2)",
     border: "1px solid var(--border)",
-    borderRadius: "6px",
-    padding: "3px 8px",
+    borderRadius: "999px",
+    padding: "4px 10px",
     fontSize: "12px",
     color: "var(--text-muted)",
+    fontWeight: 500,
   },
   diffBadge: {
-    background: "var(--accent)",
-    borderRadius: "6px",
-    padding: "3px 8px",
+    background: "var(--accent-grad)",
+    borderRadius: "999px",
+    padding: "4px 10px",
     fontSize: "12px",
     color: "#fff",
-    fontWeight: 600,
+    fontWeight: 700,
     textTransform: "capitalize",
+    boxShadow: "0 2px 8px var(--accent-glow)",
   },
   secretWord: {
     display: "flex",
@@ -631,9 +743,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   wordValue: {
     fontFamily: "'Fredoka One', cursive",
-    fontSize: "22px",
+    fontSize: "24px",
     color: "var(--accent3)",
     letterSpacing: "0.5px",
+    textShadow: "0 0 24px var(--accent3-glow)",
   },
   controls: {
     display: "flex",
@@ -642,30 +755,34 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
   },
   btn: {
-    padding: "10px 20px",
-    borderRadius: "10px",
+    padding: "11px 22px",
+    borderRadius: "12px",
     fontSize: "15px",
     fontWeight: 600,
-    border: "none",
-    transition: "all 0.15s",
+    border: "1px solid transparent",
+    transition: "all 0.18s ease",
     fontFamily: "'Fredoka One', cursive",
     letterSpacing: "0.3px",
   },
   btnPrimary: {
-    background: "var(--accent)",
+    background: "var(--accent-grad)",
     color: "#fff",
+    boxShadow: "0 6px 20px var(--accent-glow)",
   },
   btnSecondary: {
-    background: "var(--accent2)",
-    color: "#000",
+    background: "var(--surface2)",
+    color: "var(--text)",
+    border: "1px solid var(--border-strong)",
   },
   btnGhost: {
-    background: "var(--surface2)",
+    background: "transparent",
     color: "var(--text-muted)",
     border: "1px solid var(--border)",
   },
   btnDisabled: {
-    opacity: 0.5,
+    opacity: 0.45,
     cursor: "not-allowed",
+    boxShadow: "none",
+    animation: "none",
   },
 };

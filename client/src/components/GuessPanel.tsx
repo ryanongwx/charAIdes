@@ -26,9 +26,11 @@ export default function GuessPanel({ guesses, isGuessing }: GuessPanelProps) {
       <div style={styles.list} role="log" aria-live="polite" aria-label="Guess history">
         {guesses.length === 0 && !isGuessing && (
           <div style={styles.empty}>
-            <span style={{ fontSize: "32px" }}>🎨</span>
-            <p>Just start drawing — <strong>the AI will guess as you go</strong>.</p>
-            <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+            <div style={styles.emptyIcon} aria-hidden="true">🎨</div>
+            <p style={styles.emptyTitle}>
+              Just start drawing — <strong style={{ color: "var(--text)" }}>the AI will guess as you go</strong>.
+            </p>
+            <p style={styles.emptyHint}>
               Every couple of seconds it'll call out what it thinks you're drawing.
             </p>
           </div>
@@ -76,41 +78,46 @@ const styles: Record<string, React.CSSProperties> = {
   panel: {
     display: "flex",
     flexDirection: "column",
-    background: "var(--surface)",
+    background:
+      "linear-gradient(180deg, rgba(30,30,60,0.55) 0%, rgba(23,23,48,0.75) 100%)",
     borderRadius: "var(--radius)",
     border: "1px solid var(--border)",
     overflow: "hidden",
     height: "100%",
-    minHeight: "300px",
+    minHeight: "320px",
+    boxShadow: "var(--shadow-sm)",
   },
   header: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "12px 16px",
+    gap: "10px",
+    padding: "14px 18px",
     borderBottom: "1px solid var(--border)",
-    background: "var(--surface2)",
+    background: "rgba(30,30,60,0.55)",
   },
   aiAvatar: {
-    fontSize: "20px",
+    fontSize: "22px",
+    filter: "drop-shadow(0 2px 6px rgba(78,205,196,0.4))",
   },
   headerText: {
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: "14px",
     flex: 1,
+    letterSpacing: "0.2px",
   },
   badge: {
-    background: "var(--accent)",
+    background: "var(--accent-grad)",
     color: "#fff",
     fontSize: "11px",
     fontWeight: 700,
-    padding: "2px 8px",
-    borderRadius: "10px",
+    padding: "3px 10px",
+    borderRadius: "999px",
+    boxShadow: "0 2px 8px var(--accent-glow)",
   },
   list: {
     flex: 1,
     overflowY: "auto",
-    padding: "12px",
+    padding: "14px",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -120,26 +127,44 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: "8px",
+    gap: "10px",
     flex: 1,
     color: "var(--text-muted)",
     textAlign: "center",
-    padding: "24px",
+    padding: "28px 20px",
+  },
+  emptyIcon: {
+    fontSize: "40px",
+    lineHeight: 1,
+    animation: "floatY 3s ease-in-out infinite",
+    filter: "drop-shadow(0 4px 14px rgba(78,205,196,0.25))",
+  },
+  emptyTitle: {
+    fontSize: "14px",
+    lineHeight: 1.5,
+    maxWidth: "240px",
+  },
+  emptyHint: {
+    fontSize: "12px",
+    color: "var(--text-dim)",
+    maxWidth: "240px",
   },
   guessItem: {
     display: "flex",
     alignItems: "flex-start",
-    gap: "8px",
-    padding: "10px 12px",
+    gap: "10px",
+    padding: "10px 14px",
     background: "var(--surface2)",
-    borderRadius: "8px",
+    borderRadius: "10px",
     border: "1px solid var(--border)",
     fontSize: "14px",
     lineHeight: 1.4,
   },
   guessCorrect: {
-    background: "rgba(46,204,113,0.15)",
+    background:
+      "linear-gradient(135deg, rgba(46,204,113,0.22) 0%, rgba(46,204,113,0.08) 100%)",
     border: "1px solid var(--success)",
+    boxShadow: "0 0 0 1px rgba(46,204,113,0.2), 0 4px 16px rgba(46,204,113,0.15)",
   },
   guessHint: {
     background: "rgba(245,166,35,0.1)",

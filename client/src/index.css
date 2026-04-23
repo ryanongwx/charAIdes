@@ -5,18 +5,31 @@
 }
 
 :root {
-  --bg: #0f0f1a;
-  --surface: #1a1a2e;
-  --surface2: #16213e;
-  --accent: #e94560;
-  --accent2: #f5a623;
+  --bg: #0b0b17;
+  --bg-2: #121225;
+  --surface: #171730;
+  --surface2: #1e1e3c;
+  --surface-hover: #252548;
+  --accent: #ff4d6d;
+  --accent-glow: rgba(255, 77, 109, 0.35);
+  --accent2: #ffb648;
   --accent3: #4ecdc4;
-  --text: #f0f0f0;
-  --text-muted: #8888aa;
-  --border: #2a2a4a;
+  --accent3-glow: rgba(78, 205, 196, 0.3);
+  --accent-grad: linear-gradient(135deg, #ff4d6d 0%, #ff8a5c 100%);
+  --accent3-grad: linear-gradient(135deg, #4ecdc4 0%, #6a8bff 100%);
+  --text: #f5f5fa;
+  --text-muted: #8a8aaf;
+  --text-dim: #5e5e80;
+  --border: #2a2a50;
+  --border-strong: #3a3a66;
   --success: #2ecc71;
-  --radius: 12px;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --warning: #ffb648;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.03), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 html, body {
@@ -26,6 +39,18 @@ html, body {
   font-family: 'Inter', sans-serif;
   font-size: 16px;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  /* Subtle radial accents for depth on the dark background */
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, rgba(255, 77, 109, 0.10), transparent 70%),
+    radial-gradient(ellipse 50% 35% at 85% 10%, rgba(78, 205, 196, 0.08), transparent 70%),
+    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(154, 109, 255, 0.07), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
 }
 
 #root {
@@ -44,10 +69,20 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); background-clip: padding-box; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -59,6 +94,16 @@ button:focus-visible {
   50% { transform: scale(1.05); }
 }
 
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow), 0 8px 24px rgba(0,0,0,0.3); }
+  50%      { box-shadow: 0 0 0 14px rgba(255, 77, 109, 0), 0 8px 24px rgba(0,0,0,0.3); }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-6px); }
@@ -68,51 +113,52 @@ button:focus-visible {
 }
 
 @keyframes confetti-fall {
-  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
 
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to   { transform: rotate(360deg); }
 }
 
 @keyframes slideInRight {
-  from {
-    transform: translateX(400px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(400px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
 }
 
 @keyframes fadeOut {
-  from {
-    opacity: 1;
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ======================================================================
+   Mobile / tablet breakpoints
+   ====================================================================== */
+
+/* Tablet: <= 1024px — tighten spacing, narrow sidebar */
+@media (max-width: 1024px) {
+  .game-main {
+    gap: 16px !important;
+    padding: 16px !important;
   }
-  to {
-    opacity: 0;
+  .game-right-col {
+    flex: 0 0 260px !important;
+    min-width: 220px !important;
   }
 }
 
-/* Mobile optimizations */
+/* Mobile: <= 768px — stack the two columns */
 @media (max-width: 768px) {
-  html {
-    font-size: 14px;
-  }
+  html { font-size: 15px; }
 
-  #root {
-    overflow-y: auto;
-  }
+  #root { overflow-y: auto; }
 
-  /* Switch from side-by-side columns to stacked layout */
   .app-root {
     height: auto !important;
     min-height: 100vh;
@@ -123,27 +169,71 @@ button:focus-visible {
     flex-direction: column !important;
     overflow: visible !important;
     padding: 12px !important;
+    gap: 12px !important;
   }
 
-  .game-left-col {
-    flex: none !important;
-    overflow-y: visible !important;
-  }
-
-  /* Guess panel gets a fixed height below the canvas */
+  .game-left-col,
   .game-right-col {
     flex: none !important;
-    height: 260px;
+    width: 100%;
     min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  .game-right-col {
+    height: 280px;
   }
 
   .game-controls {
-    justify-content: flex-start;
+    justify-content: stretch;
+    gap: 8px !important;
   }
+
+  .game-controls > button {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 14px !important;
+    padding: 10px 14px !important;
+  }
+
+  /* Header: compact title, keep controls wrapping */
+  .app-header {
+    padding: 12px 16px !important;
+    gap: 8px !important;
+  }
+  .app-header .header-subtitle { display: none !important; }
+  .app-header .header-title-text { font-size: 22px !important; }
+  .app-header .header-emoji { font-size: 24px !important; }
+
+  .hero-card {
+    padding: 32px 20px !important;
+  }
+  .hero-card .hero-title { font-size: 28px !important; }
+
+  /* Canvas toolbar wraps tighter */
+  .canvas-toolbar {
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+  .canvas-toolbar .toolbar-divider { display: none; }
 }
 
-/* Toast mobile styles */
+/* Small phones: <= 480px */
 @media (max-width: 480px) {
+  .app-header {
+    padding: 10px 12px !important;
+  }
+  .app-header .header-title-text { font-size: 20px !important; }
+  .app-header .header-diff-label { display: none; }
+  .app-header .header-diff-btn {
+    padding: 6px 10px !important;
+  }
+
+  .game-controls > button {
+    font-size: 13px !important;
+    padding: 10px 10px !important;
+  }
+
   .toast-container {
     top: 10px;
     right: 10px;
@@ -154,24 +244,43 @@ button:focus-visible {
     min-width: 0 !important;
     max-width: 100% !important;
   }
+
+  .hero-card {
+    padding: 28px 16px !important;
+  }
+  .hero-card .hero-title { font-size: 24px !important; }
+  .hero-card .hero-desc  { font-size: 14px !important; }
+  .hero-card .hero-start-btn {
+    width: 100%;
+    font-size: 16px !important;
+    padding: 14px 20px !important;
+  }
 }
 
-/* Smooth transitions */
-* {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+/* Smooth transitions (limited scope — avoid transitioning transform) */
+button, a, input, select, textarea {
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
 }
 
 button:active:not(:disabled) {
   transform: translateY(0);
 }
 
-/* Focus styles for accessibility */
 *:focus-visible {
   outline: 2px solid var(--accent3);
   outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

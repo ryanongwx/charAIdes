@@ -174,7 +174,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
 
     return (
       <div style={styles.wrapper}>
-        <div style={styles.toolbar}>
+        <div style={styles.toolbar} className="canvas-toolbar">
           <div style={styles.colorGrid} role="group" aria-label="Color palette">
             {COLORS.map((c) => (
               <button
@@ -194,7 +194,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             ))}
           </div>
 
-          <div style={styles.divider} />
+          <div style={styles.divider} className="toolbar-divider" />
 
           <div style={styles.brushGroup} role="group" aria-label="Brush size">
             {BRUSH_SIZES.map((b) => (
@@ -214,7 +214,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
             ))}
           </div>
 
-          <div style={styles.divider} />
+          <div style={styles.divider} className="toolbar-divider" />
 
           <button
             onClick={() => {
@@ -299,25 +299,27 @@ const styles: Record<string, React.CSSProperties> = {
   toolbar: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    padding: "10px 12px",
-    background: "var(--surface2)",
+    gap: "12px",
+    padding: "10px 14px",
+    background: "var(--surface)",
     borderRadius: "var(--radius)",
     border: "1px solid var(--border)",
     flexWrap: "wrap",
+    boxShadow: "var(--shadow-sm)",
   },
   colorGrid: {
     display: "flex",
-    gap: "5px",
+    gap: "6px",
     flexWrap: "wrap",
-    maxWidth: "160px",
+    maxWidth: "180px",
   },
   colorSwatch: {
-    width: "22px",
-    height: "22px",
+    width: "24px",
+    height: "24px",
     borderRadius: "50%",
     cursor: "pointer",
-    transition: "transform 0.15s, border 0.15s",
+    transition: "transform 0.15s, border 0.15s, box-shadow 0.15s",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
   },
   divider: {
     width: "1px",
@@ -329,33 +331,36 @@ const styles: Record<string, React.CSSProperties> = {
     gap: "6px",
   },
   brushBtn: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "8px",
+    width: "34px",
+    height: "34px",
+    borderRadius: "10px",
     fontSize: "12px",
-    fontWeight: 600,
+    fontWeight: 700,
     border: "1px solid var(--border)",
     transition: "all 0.15s",
+    fontFamily: "inherit",
   },
   actionBtn: {
-    padding: "6px 12px",
-    borderRadius: "8px",
-    background: "var(--surface)",
+    padding: "7px 14px",
+    borderRadius: "10px",
+    background: "var(--surface2)",
     color: "var(--text-muted)",
     fontSize: "13px",
+    fontWeight: 500,
     border: "1px solid var(--border)",
     transition: "all 0.15s",
   },
   canvas: {
     display: "block",
     borderRadius: "var(--radius)",
-    border: "2px solid var(--border)",
+    border: "1px solid var(--border)",
     background: "#ffffff",
     width: "100%",
     maxWidth: "600px",
     height: "auto",
     touchAction: "none",
-    boxShadow: "var(--shadow)",
+    boxShadow:
+      "0 0 0 1px rgba(255,255,255,0.04), 0 12px 32px rgba(0,0,0,0.45)",
   },
   thinkingBadge: {
     position: "absolute",
