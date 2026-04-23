@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { isCorrectGuess } from "../lib/fuzzyMatch";
+import { getRandomWord } from "../lib/wordBank";
+import type { WordEntry as BankWordEntry } from "../lib/wordBank";
 
 export type GamePhase = "IDLE" | "DRAWING" | "GUESSING" | "WON" | "LOST";
 export type Difficulty = "easy" | "medium" | "hard";
@@ -71,12 +73,8 @@ export function useGameState() {
       setWordEntry(null);
       clearTimer();
 
-      const res = await fetch(`/api/word?difficulty=${diff}`, { signal });
-      if (!res.ok) {
-        setPhase("IDLE");
-        throw new Error(`Failed to fetch word (${res.status})`);
-      }
-      const data: WordEntry = await res.json();
+      if (signal?.aborted) return;
+      const data: BankWordEntry = getRandomWord(diff);
       setWordEntry(data);
       setPhase("DRAWING");
       startTimer();

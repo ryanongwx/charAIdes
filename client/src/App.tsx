@@ -14,6 +14,7 @@ import { useSoundEffects } from "./hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./contexts/ToastContext";
 import type { Difficulty } from "./hooks/useGameState";
+import { apiUrl } from "./lib/api";
 
 const AUTO_GUESS_MIN_MS = 2000;
 const AUTO_GUESS_MAX_MS = 5000;
@@ -83,7 +84,7 @@ export default function App() {
       const hint = hintUsed && wordEntry ? `Category: ${wordEntry.category}` : undefined;
       const canvasChanged = opts?.canvasChanged ?? true;
 
-      const { guessText } = await fetchAndPlay("/api/guess", {
+      const { guessText } = await fetchAndPlay(apiUrl("/api/guess"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image, guessHistory, hint, canvasChanged }),
@@ -97,7 +98,7 @@ export default function App() {
           gameRecordedRef.current = true;
           recordGame(true, guessCount + 1);
           try {
-            await fetchAndPlay("/api/celebrate", {
+            await fetchAndPlay(apiUrl("/api/celebrate"), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -186,7 +187,7 @@ export default function App() {
     (async () => {
       try {
         if (cancelled) return;
-        await fetchAndPlay("/api/celebrate", {
+        await fetchAndPlay(apiUrl("/api/celebrate"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ won: false, word: wordEntry.word, guessCount }),
@@ -279,7 +280,7 @@ export default function App() {
     }, 20000);
 
     try {
-      const res = await fetch("/api/generate-word", {
+      const res = await fetch(apiUrl("/api/generate-word"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ difficulty }),
@@ -323,7 +324,7 @@ export default function App() {
     }, 15000);
 
     try {
-      const res = await fetch("/api/word-of-the-day", { signal: controller.signal });
+      const res = await fetch(apiUrl("/api/word-of-the-day"), { signal: controller.signal });
 
       if (!res.ok) throw new Error("Failed to get word of the day");
 
