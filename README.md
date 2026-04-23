@@ -11,11 +11,14 @@ Built for the **Kiro × ElevenLabs Hackathon** using spec-driven development.
 ## How It Works
 
 1. Pick a difficulty and hit **Start Game** — you get a secret word to draw.
-2. **Start drawing** — the AI watches in real-time and automatically blurts out a new spoken guess every 2–5 seconds: *"Ooh, is that a flamingo?!"*
-3. Keep adding detail. Each new stroke gives the AI fresh context, just like a real partner in Pictionary.
-4. The AI adapts its timing — if you stop drawing, it waits a bit longer before guessing again, giving you space to think.
-5. Want it to guess *right now*? Hit **⚡ Guess Now** (or Space/Enter) to skip the wait.
-6. When the AI guesses correctly (or time runs out), it reacts with a voiced celebration or playful consolation.
+2. **Or try these alternatives:**
+   - Click **✨ Generate AI Word** for unlimited variety using GPT-4o-mini
+   - Click **📅 Word of the Day** for today's special challenge
+3. **Start drawing** — the AI watches in real-time and automatically blurts out a new spoken guess every 2–5 seconds: *"Ooh, is that a flamingo?!"*
+4. Keep adding detail. Each new stroke gives the AI fresh context, just like a real partner in Pictionary.
+5. The AI adapts its timing — if you stop drawing, it waits a bit longer before guessing again, giving you space to think.
+6. Want it to guess *right now*? Hit **⚡ Guess Now** (or Space/Enter) to skip the wait.
+7. When the AI guesses correctly (or time runs out), it reacts with a voiced celebration or playful consolation.
 
 ---
 
@@ -124,8 +127,18 @@ Navigate to **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 ## Playing the Game
 
+### Starting a Game
+
+You have three ways to get a word:
+
+1. **🎮 Start Game** (or press **S**) — Random word from curated word bank (180 words)
+2. **✨ Generate AI Word** — GPT-4o-mini creates a unique, drawable word on-demand
+3. **📅 Word of the Day** — Get today's special challenge (same for everyone, changes daily)
+
+### Playing
+
 1. **Select a difficulty** in the top-right (Easy / Medium / Hard).
-2. Click **🎮 Start Game** (or press **S**) — a secret word appears at the top left.
+2. Choose your word source (see above).
 3. **Start drawing** on the white canvas. Use the color palette and brush size buttons in the toolbar.
 4. **The AI watches automatically** — every 2–5 seconds, it analyzes your drawing and speaks a guess aloud.
 5. The guess appears in the panel on the right. Keep drawing to give the AI more clues.
@@ -248,7 +261,9 @@ ai-charades/
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/word?difficulty=easy\|medium\|hard` | Returns a random word entry |
+| `GET` | `/api/word?difficulty=easy\|medium\|hard` | Returns a random word from the curated word bank |
+| `POST` | `/api/generate-word` | Accepts `{ difficulty }`, returns AI-generated word using GPT-4o-mini |
+| `GET` | `/api/word-of-the-day` | Returns today's word of the day (cached, same for everyone) |
 | `POST` | `/api/guess` | Accepts `{ image, guessHistory, hint? }`, returns `audio/mpeg` stream with `X-Guess-Text` header |
 | `POST` | `/api/celebrate` | Accepts `{ won, word, guessCount }`, returns `audio/mpeg` stream |
 | `GET` | `/health` | Server health check |
@@ -262,6 +277,9 @@ ai-charades/
 - 🔄 **Auto-guessing** — AI watches in real-time and guesses every 2–5 seconds automatically
 - 🧠 **Adaptive timing** — AI waits longer when you stop drawing, giving you space to think
 - ⚡ **Manual guess** — Skip the wait with "Guess Now" button (Space/Enter)
+- 📚 **180-word curated bank** — 60 easy, 60 medium, 60 hard words
+- ✨ **AI word generation** — GPT-4o-mini creates unlimited unique words on-demand
+- 📅 **Word of the Day** — Daily challenge word, same for everyone
 - ⏱️ **90-second timer** — color shifts from teal → amber → red as time runs low
 - 💡 **Hint system** — reveals the word's category (+1 guess penalty)
 - 📜 **Guess history** — scrollable log of every AI guess with correct-answer highlight

@@ -79,6 +79,32 @@ export function useGameState() {
     [difficulty, startTimer, clearTimer]
   );
 
+  const startCustomRound = useCallback(
+    (customWord: WordEntry) => {
+      setDifficulty(customWord.difficulty);
+      setGuesses([]);
+      setHintUsed(false);
+      setWordEntry(customWord);
+      clearTimer();
+      setPhase("DRAWING");
+      startTimer();
+    },
+    [setDifficulty, startTimer, clearTimer]
+  );
+
+  const startCustomRound = useCallback(
+    (entry: WordEntry) => {
+      setDifficulty(entry.difficulty);
+      setGuesses([]);
+      setHintUsed(false);
+      clearTimer();
+      setWordEntry(entry);
+      setPhase("DRAWING");
+      startTimer();
+    },
+    [startTimer, clearTimer]
+  );
+
   const addGuess = useCallback(
     (text: string): boolean => {
       if (!wordEntry) return false;
@@ -127,6 +153,7 @@ export function useGameState() {
     timeLeft,
     hintUsed,
     startRound,
+    startCustomRound,
     addGuess,
     useHint,
     setGuessing,

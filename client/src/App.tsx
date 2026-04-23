@@ -44,6 +44,7 @@ export default function App() {
     timeLeft,
     hintUsed,
     startRound,
+    startCustomRound,
     addGuess,
     useHint,
     setGuessing,
@@ -194,7 +195,7 @@ export default function App() {
   }, [phase, wordEntry, guessCount, fetchAndPlay, recordGame]);
 
   const beginRound = useCallback(
-    (d?: Difficulty) => {
+    (d?: Difficulty, customWord?: { word: string; category: string; difficulty: Difficulty }) => {
       stopAudio();
       canvasRef.current?.clear();
       setIsLoadingWord(true);
@@ -203,18 +204,120 @@ export default function App() {
       lastGuessedSigRef.current = null;
       unchangedTicksRef.current = 0;
       playClick();
-      startRound(d)
-        .catch(() => {
-          setError("Failed to start game. Check your connection and server.");
-          playError();
-        })
-        .finally(() => setIsLoadingWord(false));
+
+      if (customWord) {
+        startCustomRound(customWord);
+        setIsLoadingWord(false);
+      } else {
+        startRound(d)
+          .catch(() => {
+            setError("Failed to start game. Check your connection and server.");
+            playError();
+          })
+          .finally(() => setIsLoadingWord(false));
+      }
     },
-    [startRound, playClick, playError, stopAudio]
+    [startRound, startCustomRound, playClick, playError, stopAudio]
   );
+
+  const handleGenerateWord = useCallback(async () => {
+    if (!isIdle && !isOver) return;
+    
+    setIsLoadingWord(true);
+    setError(null);
+    playClick();
+    
+    try {
+      const res = await fetch("/api/generate-word", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ difficulty }),
+      });
+      
+      if (!res.ok) throw new Error("Failed to generate word");
+      
+      const word = await res.json();
+      beginRound(undefined, word);
+    } catch (err) {
+      console.error("Generate word failed:", err);
+      setError("Failed to generate AI word. Using word bank instead.");
+      playError();
+      beginRound(difficulty);
+    }
+  }, [isIdle, isOver, difficulty, playClick, playError, beginRound]);
+
+  const handleWordOfTheDay = useCallback(async () => {
+    if (!isIdle && !isOver) return;
+    
+    setIsLoadingWord(true);
+    setError(null);
+    playClick();
+    
+    try {
+      const res = await fetch("/api/word-of-the-day");
+      
+      if (!res.ok) throw new Error("Failed to get word of the day");
+      
+      const word = await res.json();
+      beginRound(undefined, word);
+    } catch (err) {
+      console.error("Word of the day failed:", err);
+      setError("Failed to get word of the day. Using word bank instead.");
+      playError();
+      beginRound(difficulty);
+    }
+  }, [isIdle, isOver, difficulty, playClick, playError, beginRound]);
 
   const handlePlayAgain = useCallback(() => beginRound(difficulty), [beginRound, difficulty]);
   const handleStartGame = useCallback(() => beginRound(), [beginRound]);
+
+  const handleGenerateWord = useCallback(async () => {
+    if (!isIdle && !isOver) return;
+    
+    setIsLoadingWord(true);
+    setError(null);
+    playClick();
+
+    try {
+      const res = await fetch("/api/generate-word", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ difficulty }),
+      });
+
+      if (!res.ok) throw new Error("Failed to generate word");
+
+      const data = await res.json();
+      beginRound(undefined, data);
+    } catch (err) {
+      console.error("Generate word failed:", err);
+      setError("Failed to generate AI word. Check your connection.");
+      playError();
+      setIsLoadingWord(false);
+    }
+  }, [isIdle, isOver, difficulty, beginRound, playClick, playError]);
+
+  const handleWordOfTheDay = useCallback(async () => {
+    if (!isIdle && !isOver) return;
+    
+    setIsLoadingWord(true);
+    setError(null);
+    playClick();
+
+    try {
+      const res = await fetch("/api/word-of-the-day");
+
+      if (!res.ok) throw new Error("Failed to get word of the day");
+
+      const data = await res.json();
+      beginRound(undefined, data);
+    } catch (err) {
+      console.error("Word of the day failed:", err);
+      setError("Failed to get word of the day. Check your connection.");
+      playError();
+      setIsLoadingWord(false);
+    }
+  }, [isIdle, isOver, beginRound, playClick, playError]);
 
   const handleDifficultyChange = useCallback(
     (d: Difficulty) => {
@@ -292,6 +395,8 @@ export default function App() {
         disabled={!isIdle && !isOver}
         onShowStats={() => setShowStats(true)}
         onShowShortcuts={() => setShowShortcuts(true)}
+        onGenerateWord={handleGenerateWord}
+        onWordOfTheDay={handleWordOfTheDay}
       />
 
       <main style={styles.main}>

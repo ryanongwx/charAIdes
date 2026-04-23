@@ -12,6 +12,8 @@ import rateLimit from "express-rate-limit";
 import guessRouter from "./routes/guess";
 import celebrateRouter from "./routes/celebrate";
 import wordRouter from "./routes/word";
+import generateWordRouter from "./routes/generateWord";
+import wordOfTheDayRouter from "./routes/wordOfTheDay";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -45,6 +47,8 @@ app.use(express.json({ limit: "10mb" }));
 app.use("/api/guess", guessRouter);
 app.use("/api/celebrate", celebrateRouter);
 app.use("/api/word", wordRouter);
+app.use("/api/generate-word", generateWordRouter);
+app.use("/api/word-of-the-day", wordOfTheDayRouter);
 
 app.get("/health", (_req, res) => {
   res.json({

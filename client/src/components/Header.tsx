@@ -7,6 +7,8 @@ interface HeaderProps {
   disabled: boolean;
   onShowStats: () => void;
   onShowShortcuts: () => void;
+  onGenerateWord: () => void;
+  onWordOfTheDay: () => void;
 }
 
 const difficulties: { value: Difficulty; label: string; emoji: string }[] = [
@@ -20,7 +22,9 @@ export default function Header({
   onDifficultyChange, 
   disabled, 
   onShowStats, 
-  onShowShortcuts 
+  onShowShortcuts,
+  onGenerateWord,
+  onWordOfTheDay
 }: HeaderProps) {
   return (
     <header style={styles.header}>
@@ -51,6 +55,24 @@ export default function Header({
         </div>
         
         <div style={styles.iconButtons}>
+          <button
+            onClick={onWordOfTheDay}
+            style={styles.iconBtn}
+            aria-label="Word of the day"
+            title="Word of the Day"
+            disabled={disabled}
+          >
+            📅
+          </button>
+          <button
+            onClick={onGenerateWord}
+            style={styles.iconBtn}
+            aria-label="Generate AI word"
+            title="Generate AI Word"
+            disabled={disabled}
+          >
+            ✨
+          </button>
           <button
             onClick={onShowStats}
             style={styles.iconBtn}
